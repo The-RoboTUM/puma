@@ -1,46 +1,50 @@
 import cv2
 import numpy as np
 
-urls = [
-    "rtsp://10.21.31.103:8554/video1",  # Front
-    "rtsp://10.21.31.103:8554/video2",  # Rear
-]
-caps = [cv2.VideoCapture(u) for u in urls]
-for i, cap in enumerate(caps):
-    if not cap.isOpened():
-        print(f"Failed to open stream {i}: {urls[i]}")
+FRONT = "rtsp://10.21.31.103:8554/video1"
+REAR  = "rtsp://10.21.31.103:8554/video2"
 
-TARGET_H = 480  # resize to same height for tiling
+def gst_rtsp(url, tcp=False):
+    proto = "tcp" if tcp else "udp"
+    return (
+        f"rtspsrc location={url} latency=0 protocols={proto} ! "
+        f"rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! "
+        f"appsink sync=false drop=true max-buffers=1"
+    )
 
-def read_resized(cap, target_h):
-    ok, frame = cap.read()
-    if not ok or frame is None:
-        return None
-    h, w = frame.shape[:2]
-    scale = target_h / float(h)
-    return cv2.resize(frame, (int(w * scale), target_h), interpolation=cv2.INTER_AREA)
+cap1 = cv2.VideoCapture(gst_rtsp(FRONT, tcp=False), cv2.CAP_GSTREAMER)
+cap2 = cv2.VideoCapture(gst_rtsp(REAR,  tcp=False), cv2.CAP_GSTREAMER)
+if not cap1.isOpened(): raise SystemExit(f"Failed to open FRONT: {FRONT}")
+if not cap2.isOpened(): raise SystemExit(f"Failed to open REAR:  {REAR}")
 
-while True:
-    frames = [read_resized(c, TARGET_H) for c in caps]
-    valid = [f for f in frames if f is not None]
-    if valid:
-        # pad missing streams with black
-        max_w = max(f.shape[1] for f in valid)
-        tiled = []
-        for f in frames:
-            if f is None:
-                f = np.zeros((TARGET_H, max_w, 3), dtype=np.uint8)
-            else:
-                pad = max_w - f.shape[1]
-                if pad > 0:
-                    f = np.pad(f, ((0,0),(0,pad),(0,0)), mode='constant')
-            tiled.append(f)
-        view = np.hstack(tiled)
-        cv2.imshow("Lynx M20 Cameras", view)
+try:
+    while True:
+        ok1, f1 = cap1.read()
+        ok2, f2 = cap2.read()
 
-    if cv2.waitKey(1) == 27:  # ESC
-        break
+        if not ok1 and not ok2:
+            if cv2.waitKey(1) == 27: break
+            continue
 
-for c in caps:
-    c.release()
-cv2.destroyAllWindows()
+        if ok1 and not ok2:
+            f2 = np.zeros_like(f1)
+        if ok2 and not ok1:
+            f1 = np.zeros_like(f2)
+
+        if ok1 and ok2 and f1.shape[0] != f2.shape[0]:
+            h = max(f1.shape[0], f2.shape[0])
+            def pad_to_h(img, H):
+                pad = H - img.shape[0]
+                if pad <= 0: return img
+                return np.pad(img, ((0,pad),(0,0),(0,0)), mode="constant")
+            f1, f2 = pad_to_h(f1, h), pad_to_h(f2, h)
+
+        if ok1 or ok2:
+            view = np.hstack([f1, f2])
+            cv2.imshow("Lynx M20 Cameras (GStreamer)", view)
+
+        if cv2.waitKey(1) == 27:  # ESC
+            break
+finally:
+    cap1.release(); cap2.release()
+    cv2.destroyAllWindows()
