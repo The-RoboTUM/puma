@@ -27,7 +27,7 @@ def parse_header(header_bytes):
     # reserved bytes 9-15 can be checked if needed
     return payload_length, message_id, asdu_structure
 
-# create heartbeat payload
+# TODO: JSON DOESNT WORK FOR SOME REASON, FIX IT
 def create_heartbeat_payload(time_str):
     payload = {
         "Type": 100,
@@ -38,12 +38,29 @@ def create_heartbeat_payload(time_str):
     }
     return json.dumps(payload).encode('utf-8')
 
+# FOR NOW, ONLY XML HEARTBEATS WORK
+def create_heartbeat_payload_xml(time_str):
+    xml_payload = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <PatrolDevice>
+        <Type>100</Type>
+        <Command>100</Command>
+        <Time>{time_str}</Time>
+        <Items/>
+    </PatrolDevice>
+    """
+    return xml_payload.encode('utf-8')
+
 async def send_heartbeat(writer):
     message_id = 0  # start at 0
     while True:
         time_str = get_current_time()
-        payload_bytes = create_heartbeat_payload(time_str)
-        header = build_header(len(payload_bytes), message_id)
+        
+        if HEARTBEAT_MODE == "JSON":
+            payload_bytes = create_heartbeat_payload(time_str)
+        else:
+            payload_bytes = create_heartbeat_payload_xml(time_str)
+        
+        header = build_header(len(payload_bytes), message_id, is_json=False)
         message = header + payload_bytes
 
         writer.write(message)
@@ -68,7 +85,13 @@ async def listen_responses(reader):
 
         try:
             payload_data = await reader.readexactly(payload_len)
-            print(payload_data)
+            if fmt == "XML":
+                xml_str = payload_data.decode('utf-8')
+                json_obj = xmltodict.parse(xml_str)
+                print(json.dumps(json_obj, indent=2))
+            else:
+                print(payload_data.decode('utf-8'))
+
         except asyncio.IncompleteReadError:
             print("Connection closed by server during payload read")
             break
@@ -97,6 +120,9 @@ async def main(host, port):
 ADDR = "10.21.31.103"
 PORT = 30001
 HEARTBEAT_FREQ = 1 # hz
+HEARTBEAT_MODE = "XML" # TODO: fix JSON heartbeats so they also work
+
+
 print(get_current_time())
 if __name__ == "__main__":
     asyncio.run(main(ADDR, PORT))
