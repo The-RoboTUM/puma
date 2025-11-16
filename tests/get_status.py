@@ -27,18 +27,19 @@ def parse_header(header_bytes):
     # reserved bytes 9-15 can be checked if needed
     return payload_length, message_id, asdu_structure
 
-# TODO: JSON DOESNT WORK FOR SOME REASON, FIX IT
-def create_heartbeat_payload(time_str):
+# JSON heartbeat: must match XML structure with PatrolDevice root
+def create_heartbeat_payload_json(time_str):
     payload = {
-        "Type": 100,
-        "Command": 100,
-        "Time": time_str,
-        "Items": {
-		}
+        "PatrolDevice": {
+            "Type": 100,
+            "Command": 100,
+            "Time": time_str,
+            "Items": {}
+        }
     }
     return json.dumps(payload).encode('utf-8')
 
-# FOR NOW, ONLY XML HEARTBEATS WORK
+# XML heartbeat
 def create_heartbeat_payload_xml(time_str):
     xml_payload = f"""<?xml version="1.0" encoding="UTF-8"?>
     <PatrolDevice>
@@ -55,12 +56,18 @@ async def send_heartbeat(writer):
     while True:
         time_str = get_current_time()
         
+        # Create payload based on mode
         if HEARTBEAT_MODE == "JSON":
-            payload_bytes = create_heartbeat_payload(time_str)
-        else:
+            payload_bytes = create_heartbeat_payload_json(time_str)
+            is_json = True
+        elif HEARTBEAT_MODE == "XML":
             payload_bytes = create_heartbeat_payload_xml(time_str)
+            is_json = False
+        else:
+            raise ValueError(f"Invalid HEARTBEAT_MODE: {HEARTBEAT_MODE}. Must be 'JSON' or 'XML'")
         
-        header = build_header(len(payload_bytes), message_id, is_json=False)
+        # Build and send message
+        header = build_header(len(payload_bytes), message_id, is_json=is_json)
         message = header + payload_bytes
 
         writer.write(message)
@@ -85,12 +92,48 @@ async def listen_responses(reader):
 
         try:
             payload_data = await reader.readexactly(payload_len)
-            if fmt == "XML":
-                xml_str = payload_data.decode('utf-8')
-                json_obj = xmltodict.parse(xml_str)
-                print(json.dumps(json_obj, indent=2))
+
+            # Handle empty payload
+            if payload_len == 0:
+                print("Received empty payload")
+                continue
+
+            # Decode payload
+            txt = payload_data.decode('utf-8', errors='replace')
+
+            # Parse based on declared format
+            if fmt == "JSON":
+                try:
+                    obj = json.loads(txt)
+                    print(json.dumps(obj, indent=2))
+                except json.JSONDecodeError as e:
+                    print(f"Failed to parse JSON payload: {e}")
+                    # Try XML as fallback (server might send XML even when claiming JSON)
+                    if txt.strip().startswith('<') or txt.strip().startswith('<?xml'):
+                        try:
+                            obj = xmltodict.parse(txt)
+                            print("(Server sent XML despite JSON header)")
+                            print(json.dumps(obj, indent=2))
+                        except Exception as e_xml:
+                            print(f"Also failed to parse as XML: {e_xml}")
+                            print("Raw payload (as text):")
+                            print(txt)
+                    else:
+                        print("Raw payload (as text):")
+                        print(txt)
+            elif fmt == "XML":
+                try:
+                    obj = xmltodict.parse(txt)
+                    print(json.dumps(obj, indent=2))
+                except Exception as e:
+                    print(f"Failed to parse XML payload: {e}")
+                    print("Raw payload (as text):")
+                    print(txt)
             else:
-                print(payload_data.decode('utf-8'))
+                # Should never happen, but handle gracefully
+                print(f"Unknown format: {fmt}")
+                print("Raw payload (as text):")
+                print(txt)
 
         except asyncio.IncompleteReadError:
             print("Connection closed by server during payload read")
@@ -119,9 +162,13 @@ async def main(host, port):
 
 ADDR = "10.21.31.103"
 PORT = 30001
-HEARTBEAT_FREQ = 1 # hz
-HEARTBEAT_MODE = "XML" # TODO: fix JSON heartbeats so they also work
+HEARTBEAT_FREQ = 0.1  # hz
+HEARTBEAT_MODE = "JSON"  # Must be "JSON" or "XML"
 
+
+# Validate configuration
+if HEARTBEAT_MODE not in ("JSON", "XML"):
+    raise ValueError(f"Invalid HEARTBEAT_MODE: '{HEARTBEAT_MODE}'. Must be 'JSON' or 'XML'")
 
 print(get_current_time())
 if __name__ == "__main__":
