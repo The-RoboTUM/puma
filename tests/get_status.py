@@ -163,7 +163,7 @@ async def main(host, port):
 ADDR = "10.21.31.103"
 PORT = 30001
 HEARTBEAT_FREQ = 0.1  # hz
-HEARTBEAT_MODE = "JSON"  # Must be "JSON" or "XML"
+HEARTBEAT_MODE = "XML"  # Must be "JSON" or "XML"
 
 
 # Validate configuration
