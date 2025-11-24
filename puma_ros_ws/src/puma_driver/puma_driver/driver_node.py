@@ -15,7 +15,7 @@ class PumaRosDriver(Node):
 
         # === 初始化 TCP 客户端 ===
         # 使用 RobotClient 默认的 ROBOT_IP / ROBOT_PORT（来自 protocol_utils）
-        # 这样行为和你原来的 teleop_robot.py 完全一致
+        # 这样行为和原来的 teleop_robot.py 完全一致
         self.client = RobotClient()
 
         # === 订阅 /cmd_vel ===
