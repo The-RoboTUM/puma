@@ -40,6 +40,9 @@ The robot returns status / feedback data
 
 Other ROS nodes subscribe to `/puma/status` and receive the robot’s feedback.
 
+[View the detailed changelog](./puma/docs/changelogs/changelog_2025.11.23_Pedro.md)
+
+
 
 # 【Future Outlook】PUMA Quadruped ROS2 Communication Framework  
 *A complete architecture integrating Jetson, LiDAR, Camera, ROS2, and TCP.*
