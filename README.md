@@ -4,7 +4,7 @@
 ###  current communication structure:
 
 ```
-        (TCP data)
+        (TCP data)                           (ROS2)
 PUMA robot  ───────────────────────────▶ RobotClient.listen_loop
                                                 │
                                                 ▼
@@ -21,21 +21,27 @@ PUMA robot  ──────────────────────�
 High-level control (e.g., teleop nodes):
 
 Publish `/cmd_vel` (Twist)
+
 ↓
 
 `PumaRosDriver.cmd_vel_callback` writes the incoming values into `RobotClient.target_vx / target_vy / target_vw`
+
 ↓
 
-Inside the asynchronous thread, `RobotClient.control_loop()` sends the target velocities to the robot via TCP at a fixed rate
+Inside the asynchronous thread, `RobotClient.control_loop()` sends the target velocities to the robot via TCP at a fixed rate 
+
 ↓
 
 The robot returns status / feedback data
+
 ↓
 
 `RobotClient.listen_loop()` receives the incoming bytes → calls `on_message_received`
+
 ↓
 
 `PumaRosDriver.on_robot_message` decodes the payload into a string and publishes it to `/puma/status`
+
 ↓
 
 Other ROS nodes subscribe to `/puma/status` and receive the robot’s feedback.
