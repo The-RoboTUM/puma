@@ -40,7 +40,8 @@ The robot returns status / feedback data
 
 Other ROS nodes subscribe to `/puma/status` and receive the robot’s feedback.
 
-[View the detailed changelog](./puma/docs/changelogs/changelog_2025.11.23_Pedro.md)
+[View detailed changelog](./docs/changelogs/changelog_2025.11.23_Pedro.md)
+
 
 
 
