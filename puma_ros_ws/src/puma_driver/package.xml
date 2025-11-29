@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>puma_driver</name>
+  <version>0.0.1</version>
+  <description>ROS2 driver for PUMA robot using TCP protocol</description>
+  <maintainer email="j.andregon15@gmail.com">robotum</maintainer>
+  <license>TODO: License declaration</license>
+
+  <!-- 运行时依赖 -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <!-- 测试依赖（原样保留即可） -->
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
