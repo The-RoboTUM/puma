@@ -4,6 +4,7 @@ import threading
 import json
 import time
 import os
+import pygame
 
 # Import PyQt6 first to ensure correct Qt libraries are loaded before OpenCV
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
@@ -48,6 +49,7 @@ class Dashboard(QMainWindow):
         self.setWindowTitle("PUMA Mission Control")
         self.resize(1280, 720)
         self.last_msg_time = time.time()
+        self.control_mode = "KEYBOARD"
 
         # --- Robot Client Setup ---
         self.client = RobotClient(ROBOT_IP, ROBOT_PORT)
@@ -79,6 +81,12 @@ class Dashboard(QMainWindow):
 
         # --- Signals ---
         self.telemetry_signal.connect(self.update_telemetry_ui)
+
+        # --- Joystick Setup ---
+        self.init_joystick()
+        self.joystick_timer = QTimer()
+        self.joystick_timer.timeout.connect(self.poll_joystick)
+        self.joystick_timer.start(20) # Poll every 20ms
 
     def run_async_loop(self):
         loop = asyncio.new_event_loop()
@@ -182,6 +190,12 @@ class Dashboard(QMainWindow):
         btn_light = QPushButton("Light Toggle")
         btn_light.clicked.connect(self.toggle_light)
         control_layout.addWidget(btn_light, 0, 2)
+
+        # Control Mode Toggle
+        self.btn_control_mode = QPushButton("Control: KEYBOARD")
+        self.btn_control_mode.clicked.connect(self.toggle_control_mode)
+        self.btn_control_mode.setStyleSheet("background-color: #444; color: white;")
+        control_layout.addWidget(self.btn_control_mode, 0, 3)
 
         # Motion State Buttons
         btn_stand = QPushButton("Stand")
@@ -312,6 +326,67 @@ class Dashboard(QMainWindow):
                         max_t = v
                 self.lbl_temp.setText(f"Max Motor Temp: {max_t:.1f}°C")
 
+    def init_joystick(self):
+        pygame.init()
+        pygame.joystick.init()
+        if pygame.joystick.get_count() > 0:
+            self.joystick = pygame.joystick.Joystick(0)
+            self.joystick.init()
+            print(f"Joystick initialized: {self.joystick.get_name()}")
+        else:
+            self.joystick = None
+            print("No joystick found.")
+
+    def poll_joystick(self):
+        if not self.joystick or self.control_mode != "CONTROLLER":
+            return
+
+        pygame.event.pump()
+        
+        # Deadzone
+        DEADZONE = 0.1
+
+        # Read Axes
+        axis_0 = self.joystick.get_axis(0) # Left Stick X (Left/Right)
+        axis_1 = self.joystick.get_axis(1) # Left Stick Y (Up/Down)
+        axis_2 = self.joystick.get_axis(2) # Right Stick X (Rotate)
+
+        # Apply Deadzone
+        if abs(axis_0) < DEADZONE: axis_0 = 0
+        if abs(axis_1) < DEADZONE: axis_1 = 0
+        if abs(axis_2) < DEADZONE: axis_2 = 0
+
+        # Map to Robot Velocities
+        # Axis 1: Up (-1) -> +Vx
+        self.client.target_vx = -axis_1 * self.client.MAX_SPEED
+        
+        # Axis 0: Left (-1) -> +Vy
+        self.client.target_vy = -axis_0 * self.client.MAX_SPEED
+        
+        # Axis 2: Left (-1) -> +Vw
+        self.client.target_vw = -axis_2 * self.client.MAX_OMEGA
+
+        # Read Buttons
+        # Button 0 (A): Stand
+        if self.joystick.get_button(0):
+            self.send_command(self.client.set_motion_state, 1)
+        
+        # Button 1 (B): Sit
+        if self.joystick.get_button(1):
+            self.send_command(self.client.set_motion_state, 4)
+
+        # Button 2 (X): Obstacles Mode
+        if self.joystick.get_button(2):
+            self.send_command(self.client.set_gait, 0x1002)
+
+        # Button 3 (Y): Standard Mode
+        if self.joystick.get_button(3):
+            self.send_command(self.client.set_motion_state, 6)
+        
+        # Button 4 (LB): Damping
+        if self.joystick.get_button(4):
+            self.send_command(self.client.set_motion_state, 3)
+
     # --- Key Events for Teleop ---
     def keyPressEvent(self, event):
         key = event.key()
@@ -327,16 +402,17 @@ class Dashboard(QMainWindow):
         elif key == Qt.Key.Key_U: asyncio.run_coroutine_threadsafe(self.client.set_sleep_mode(False), self.client.loop)
         elif key == Qt.Key.Key_Space: asyncio.run_coroutine_threadsafe(self.client.soft_stop(), self.client.loop)
 
-        # Movement (Set Target)
-        elif key == Qt.Key.Key_W: self.client.target_vx = self.client.MAX_SPEED
-        elif key == Qt.Key.Key_S: self.client.target_vx = -self.client.MAX_SPEED
-        elif key == Qt.Key.Key_A: self.client.target_vy = self.client.MAX_SPEED
-        elif key == Qt.Key.Key_D: self.client.target_vy = -self.client.MAX_SPEED
-        elif key == Qt.Key.Key_Q: self.client.target_vw = self.client.MAX_OMEGA
-        elif key == Qt.Key.Key_E: self.client.target_vw = -self.client.MAX_OMEGA
+        # Movement (Set Target) - Only if in KEYBOARD mode
+        if self.control_mode == "KEYBOARD":
+            if key == Qt.Key.Key_W: self.client.target_vx = self.client.MAX_SPEED
+            elif key == Qt.Key.Key_S: self.client.target_vx = -self.client.MAX_SPEED
+            elif key == Qt.Key.Key_A: self.client.target_vy = self.client.MAX_SPEED
+            elif key == Qt.Key.Key_D: self.client.target_vy = -self.client.MAX_SPEED
+            elif key == Qt.Key.Key_Q: self.client.target_vw = self.client.MAX_OMEGA
+            elif key == Qt.Key.Key_E: self.client.target_vw = -self.client.MAX_OMEGA
 
     def keyReleaseEvent(self, event):
-        if event.isAutoRepeat():
+        if event.isAutoRepeat() or self.control_mode != "KEYBOARD":
             return
         
         key = event.key()
@@ -352,6 +428,20 @@ class Dashboard(QMainWindow):
 
     def wake_up_robot(self):
         self.send_command(self.client.set_sleep_mode, False)
+
+    def toggle_control_mode(self):
+        if self.control_mode == "KEYBOARD":
+            self.control_mode = "CONTROLLER"
+            self.btn_control_mode.setText("Control: CONTROLLER")
+            self.btn_control_mode.setStyleSheet("background-color: blue; color: white; font-weight: bold;")
+        else:
+            self.control_mode = "KEYBOARD"
+            self.btn_control_mode.setText("Control: KEYBOARD")
+            self.btn_control_mode.setStyleSheet("background-color: #444; color: white;")
+            # Stop robot when switching to keyboard to prevent stuck controller values
+            self.client.target_vx = 0.0
+            self.client.target_vy = 0.0
+            self.client.target_vw = 0.0
 
     def toggle_light(self):
         self.light_state = not self.light_state

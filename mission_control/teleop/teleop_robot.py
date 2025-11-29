@@ -35,9 +35,9 @@ class RobotClient:
         self.target_vw = 0.0
         
         # Constants
-        self.MAX_SPEED = 0.5   # m/s
+        self.MAX_SPEED = 1.0   # m/s
         self.MAX_OMEGA = 1.0   # rad/s
-        self.ACCEL = 0.5       # m/s^2
+        self.ACCEL = 1.0       # m/s^2
         self.OMEGA_ACCEL = 0.5 # rad/s^2
         
         self.last_update_time = time.time()
