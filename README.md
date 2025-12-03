@@ -1,6 +1,41 @@
 # Pedro's Notes
 
 
+### 2025.12.3
+### Updating the Submodule (`external/sdk_deploy` — official SDk from Deep Robotics) to the Latest Official Version
+
+To update the official repository that you added as a submodule, follow these steps:
+
+#### 1. Enter the submodule directory
+
+```bash
+cd external/sdk_deploy   # Replace with your actual submodule path
+```
+
+#### 2. Pull the latest changes from the official repository
+Check whether the official default branch is main or master.
+Assuming the branch is main:
+
+```bash
+git pull origin main
+```
+
+#### 3. Return to the root of your main project
+
+```bash
+cd ../..
+```
+#### 4. Commit the updated submodule reference to your main repository
+
+```bash
+git status        # You will see that external/sdk_deploy appears as modified
+git add external/sdk_deploy
+git commit -m "Update sdk_deploy submodule to latest main"
+git push
+```
+This process updates the commit reference of the submodule within your main repository, ensuring that your project now points to the latest version of the official SDK.
+
+### 2025.11.26
 ###  current communication structure:
 
 ```
