@@ -1,0 +1,3 @@
+[submodule "external/sdk_deploy"]
+	path = external/sdk_deploy
+	url = https://github.com/DeepRoboticsLab/sdk_deploy.git
