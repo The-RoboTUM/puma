@@ -97,14 +97,6 @@ class Dashboard(QMainWindow):
             try:
                 await self.client.connect()
                 
-                # --- Auto Wake Up Sequence ---
-                print("Waking up robot...")
-                await self.client.set_sleep_mode(False)
-                await asyncio.sleep(2) # Wait for wake up
-                await self.client.set_mode(0) # Regular mode
-                print("Robot awake and in Regular mode.")
-                # -----------------------------
-
                 await asyncio.gather(
                     self.client.heartbeat_loop(),
                     self.client.listen_loop(),
@@ -178,9 +170,10 @@ class Dashboard(QMainWindow):
         btn_wake.setStyleSheet("background-color: green; color: white; font-weight: bold;")
         btn_wake.clicked.connect(self.wake_up_robot)
         
-        btn_sleep = QPushButton("SLEEP")
+        btn_sleep = QPushButton("SLEEP (SIT)")
         btn_sleep.setStyleSheet("background-color: gray; color: white;")
-        btn_sleep.clicked.connect(lambda: self.send_command(self.client.set_sleep_mode, True))
+        # "Sleep" now triggers Sit (Motion State 4)
+        btn_sleep.clicked.connect(lambda: self.send_command(self.client.set_motion_state, 4))
         
         control_layout.addWidget(btn_wake, 0, 0)
         control_layout.addWidget(btn_sleep, 0, 1)
@@ -278,6 +271,23 @@ class Dashboard(QMainWindow):
             self.last_msg_time = time.time()
             txt = payload.decode('utf-8', errors='replace')
             data = json.loads(txt)
+            
+            # Debug: Print Basic Status & DevEnable
+            device = data.get("PatrolDevice", {})
+            if device.get("Type") == 1002:
+                items = device.get("Items", {})
+                
+                # Status 6: Basic Status
+                if device.get("Command") == 6:
+                    status = items.get("BasicStatus", {})
+                    print(f"Status: Sleep={status.get('Sleep')}, Motion={status.get('MotionState')}, Mode={status.get('ControlUsageMode')}")
+                
+                # Status 5: Device State (includes DevEnable)
+                if device.get("Command") == 5:
+                    dev_enable = items.get("DevEnable", {})
+                    video_power = dev_enable.get("Video", {})
+                    print(f"DevEnable: Video Front={video_power.get('Front')}, Back={video_power.get('Back')}")
+
             # Emit signal to update UI in main thread
             self.telemetry_signal.emit(data)
         except:
@@ -294,7 +304,7 @@ class Dashboard(QMainWindow):
         if msg_type == 1002 and msg_cmd == 6: # Basic Status
             status = items.get("BasicStatus", {})
             self.lbl_mode.setText(f"Mode: {status.get('ControlUsageMode')}")
-            motion_map = {0:'Idle', 1:'Stand', 2:'Estop', 3:'Damping', 4:'Sit', 6:'Standard'}
+            motion_map = {0:'Idle', 1:'Stand', 2:'Estop', 3:'Damping', 4:'Sit', 6:'Standard', 17:'RL Control'}
             self.lbl_motion.setText(f"Motion: {motion_map.get(status.get('MotionState'), 'Unknown')}")
 
         if msg_type == 1002 and msg_cmd == 4: # Motion Control Status
@@ -427,7 +437,28 @@ class Dashboard(QMainWindow):
         event.accept()
 
     def wake_up_robot(self):
-        self.send_command(self.client.set_sleep_mode, False)
+        if self.client.loop:
+            # "Wake Up" now means: Damping -> Stand -> Regular Mode
+            asyncio.run_coroutine_threadsafe(self._wake_up_sequence(), self.client.loop)
+
+    async def _wake_up_sequence(self):
+        print("Initiating wake-up sequence (Motion State Transition)...")
+        
+        # 1. Send Motion State = Damping (3)
+        print("Sending Motion State = Damping (3)...")
+        await self.client.set_motion_state(3)
+        await asyncio.sleep(1)
+
+        # 2. Send Motion State = Stand (1)
+        print("Sending Motion State = Stand (1)...")
+        await self.client.set_motion_state(1)
+        await asyncio.sleep(1)
+
+        # 3. Set Control Mode = Regular (0)
+        print("Sending Control Mode = Regular (0)...")
+        await self.client.set_mode(0)
+        
+        print("Wake-up sequence completed.")
 
     def toggle_control_mode(self):
         if self.control_mode == "KEYBOARD":

@@ -130,14 +130,12 @@ class RobotClient:
         await self.set_motion_state(2)
 
     async def set_sleep_mode(self, sleep, auto=False, time_val=30):
-        """Set Sleep Mode (Command 1)"""
-        print(f"Setting sleep mode to {sleep}...")
-        items = {
-            "Sleep": sleep,
-            "Auto": auto,
-            "Time": time_val
-        }
-        await self.send_message(1101, 1, items)
+        """
+        DEPRECATED: The protocol does not support setting sleep mode directly.
+        Use set_motion_state(4) [Sit] for 'sleep' and set_motion_state(1) [Stand] for 'wake'.
+        """
+        print(f"WARNING: set_sleep_mode is not supported by this firmware. Ignoring command.")
+        pass
 
     async def set_flashlight(self, on: bool):
         """Control Flashlight (Command 2)"""

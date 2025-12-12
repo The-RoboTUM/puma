@@ -1,0 +1,304 @@
+2 ROS2 Topics
+This section describes ROS2 topics in Lynx M20 robot, some topics use custom ROS 2 message types.
+[Notes] Before using ROS2 tools to receive topics, check frequencies, etc., you need to source the environment variables with: source /opt/robot/scripts/setup_ros2.sh.
+
+2.1 Topics of Sensor Driver
+The topics in this section are all published to the topics upon robot power-up, and developers can subscribe to topics for sensor data.
+Topic Name
+Description
+Message Type
+Frequency
+/IMU
+Generic format IMU data topic
+sensor_msgs/msg/Imu
+200Hz
+/LIDAR/POINTS
+Generic format point cloud data topic
+sensor_msgs/msg/PointCloud2
+10Hz
+[Notes] The /LIDAR/POINTS topic depends on the multicast-relay.service service. If the topic has no data, please refer to Appendix 2 to check the service status and enable or disable the corresponding service as needed.
+[Notes]  You must obtain administrator (root) privileges via su to access data from the /LIDAR/POINTS topic.
+[Notes]  The /LIDAR/POINTS topic is restricted to transmission only by the robot’s host. If external access is required, please contact technical support.
+
+
+
+2.2 Motion-related Topics
+[Notes] The topics in this section depend on the rl_deploy service. If the topic message does not respond or topic messages cannot be received, please refer to Appendix 2 to check the service status and enable or disable the corresponding services as needed.
+
+2.2.1 Motion State Switching
+The topic is activated when the motion program is started, and developers can publish messages to the topic to switch the motion state.
+Topic Name
+Description
+Message Type
+/MOTION_STATE
+motion state[1] switching command
+drdds/msg/MotionState
+The message type drdds/msg/MotionState for the topic /MOTION_STATE is a custom message type that contains drdds::msg::MetaType and drdds::msg::MotionStateValue:
+MetaType header
+  uint64 frame_id
+  Timestamp timestamp
+    int32 sec
+    uint32 nsec
+MotionStateValue data
+      int32 state
+The state field of the topic message that needs to be published to set different motion states is shown in the table below:
+State to Be Set
+Field Value to Be Published
+Idle
+0
+Stand
+1
+Soft Emergency Stop
+2
+Power-on Damping
+3
+Sit
+4
+RL Control
+17
+[1] The conversion relationship of the robot's motion state is shown in the figure below:
+
+[Notes] In the RL control state, there are two modes: standard motion mode and agile motion mode. The standard motion mode is suitable for manual control, while the agile motion mode offers better gait speed response performance and is suitable for navigation and other autonomous algorithm development.
+Developers who want to subscribe to the topic in their own programs need to define the structure of this custom message type in codes.
+
+2.2.2 Gait Switching
+The topic is activated when the motion program is started, and developers can publish messages to the topic to switch the gait.
+Topic Name
+Description
+Message Type
+/GAIT
+gait switching command
+drdds/msg/Gait
+The message type drdds/msg/Gait for the topic /GAIT is a custom message type that contains drdds::msg::MetaType and drdds::msg::GaitValue:
+MetaType header
+  uint64 frame_id
+  Timestamp timestamp
+    int32 sec
+    uint32 nsec
+GaitValue data
+      uint32 gait
+The gait field of the topic message that needs to be published to switch gait is shown in the table below:
+Gait to Be Set
+Field Value to Be Published
+Flat Gait (Agile Moton Mode)
+0x3002
+Stair Gait (Agile Moton Mode)
+0x3003
+Developers who want to subscribe to the topic in their own programs need to define the structure of this custom message type in codes.
+
+2.2.3 Obtain Basic Motion State and Gait
+This topic is published to the topics upon robot power-up, and developers can subscribe to this topic to obtain basic motion status and gait information.
+Topic Name
+Description
+Message Type
+Frequency
+/MOTION_INFO
+Basic motion state and gait of the robot
+drdds/msg/MotionInfo
+20Hz
+The message type drdds/msg/MotionInfo for the topic /MOTION_INFO is a custom message type that contains drdds::msg::MetaType and drdds::msg::MotionInfoValue:
+MetaType header
+  uint64 frame_id
+  Timestamp timestamp
+    int32 sec
+    uint32 nsec
+MotionInfoValue data
+  float32 vel_x
+  float32 vel_y
+  float32 vel_yaw 
+  float32 height
+  MotionStateValue data
+    int32 state
+  GaitValue data
+    uint32 gait
+  float32 payload
+  float32 remain_mile
+The detailed definitions of the fields in the message are shown in the table below:
+Field Name
+Meaning
+Type
+Field Value Description
+vel_x
+Forward/Backward Movement Speed(m/s)
+float32
+Positive and negative values represent forward and backward speeds respectively
+vel_y
+Left/Right Movement Speed(m/s)
+float32
+Positive and negative values represent left and right movement speeds respectively
+vel_yaw
+Horizontal Steering Speed(rad/s)
+float32
+Positive and negative values represent counterclockwise and clockwise rotation speeds respectively
+height
+The height of the robot (m)
+float32
+
+state
+The motion state of the robot
+int32
+Idle = 0
+Stand = 1
+Soft Emergency Stop = 2
+Power-on Damping = 3
+Sit = 4
+RL Control = 17
+gait
+The gait of the robot
+uint32
+Basic (Standard Motion Mode) = 0x1001
+Flat (Agile Moton Mode) = 0x3002
+Stair (Agile Motion Mode) = 0x3003
+payload
+Invalid parameter
+/
+
+remain_mile
+Estimated remaining range (km)
+float32
+
+[Notes] The standard motion mode is suitable for manual control. The agile motion mode offers better gait speed response performance and is suitable for navigation and other autonomous algorithm development.
+Developers who want to subscribe to the topic in their own programs need to define the structure of this custom message type in codes.
+
+
+
+2.3 Velocity-related Topics
+
+2.3.1 Issue velocity commands for navigation planning
+[Notes] When using this topic, conflicts may arise with the robot's built-in plannerand charge_manager services. Please refer to Appendix 2 to disable the planner and charge_manager services. Additionally, this topic depend on the basic_server service. If the velocity command does not respond, please refer to Appendix 2 to check the service status and enable or disable the basic_server service as needed.
+[Notes] This velocity topic is only effective when the robot is in navigation mode.
+[Notes] During development, if the robot’s built-in localization service is not required, you can refer to Appendix 2 to stop or disable the localization service to save resources.
+Developers can publish messages to the topic to issue velocity commands for navigation planning to control the robot's movement; and subscribe to the topic to obtain the velocity commands issued by the robot’s own navigation system.
+Topic Name
+Description
+Message Type
+/NAV_CMD
+Issue velocity commands for navigation planning
+drdds::msg::NavCmd
+The message type drdds/msg/NavCmd for the topic /NAV_CMD is a custom message type that contains drdds::msg::MetaType and drdds::msg::NavCmdValue:
+MetaType header
+  uint64 frame_id
+  Timestamp timestamp
+    int32 sec
+    uint32 nsec
+NavCmdValue data
+  float32 x_vel     
+  float32 y_vel    
+  float32 yaw_vel  
+The meanings of the fields corresponding to the message content are shown in the table below:
+Field
+Meaning
+Type
+Field Value Description
+x_vel
+Forward/Backward Movement Speed(m/s)
+float32
+Positive and negative values represent forward and backward speeds respectively
+y_vel
+Left/Right Movement Speed(m/s)
+float32
+Positive and negative values represent left and right movement speeds respectively
+yaw-vel
+Horizontal Steering Speed(rad/s)
+float32
+Positive and negative values represent counterclockwise and clockwise rotation speeds respectively
+The positive directions for the robot's movement and rotation are shown in the diagram below: 
+
+Developers who want to subscribe to the topic in their own programs need to define the structure of this custom message type in codes.
+
+
+
+Appendix 1: UDP Sample Code
+#include <iostream>
+#include <cstring>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define SERVER_IP "10.21.31.103"
+#define PORT 30000
+#define BUFFER_SIZE 1024
+
+struct udpMessage
+{
+    unsigned char header[16];
+    unsigned char data[BUFFER_SIZE];
+};
+
+
+int main() {
+    // Create a UDP socket
+    int client_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (client_fd < 0) {
+        perror("socket creation failed");
+        return -1;
+    }
+
+    // Set server address
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    if (inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0) {
+        perror("Invalid address/ Address not supported");
+        close(client_fd);
+        return -1;
+    }
+
+    udpMessage message;
+    message.header[0] = 0xeb;
+    message.header[1] = 0x91;
+    message.header[2] = 0xeb;
+    message.header[3] = 0x90;
+
+    // JSON string for sending
+    const char *data = R"(
+    {
+        "PatrolDevice":{
+            "Type":100,
+            "Command":100,
+            "Time":"2023-01-01 00:00:00",
+            "Items":{
+            }
+        }
+    }
+    )";
+
+    unsigned short dataLength = strlen(data);
+
+    message.header[4] = dataLength & 0xFF;
+    message.header[5] = (dataLength >> 8) & 0xFF;
+    message.header[6] = 0x01;
+    message.header[7] = 0x00;
+    message.header[8] = 0x01;
+
+    memcpy(message.data, data, strlen(data));
+
+    // Send data
+    ssize_t send_len = sendto(client_fd, &message, dataLength + 16, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    if (send_len < 0) {
+        perror("sendto failed");
+        close(client_fd);
+        return -1;
+    }
+
+    std::cout << "Message sent successfully." << std::endl;
+
+    // Close the socket
+    close(client_fd);
+    return 0;
+}
+
+
+
+Appendix 2: Robot Service Status Inquiry and Management Method
+● Query service availability status
+sudo systemctl status XXX.service   # XXX is the service name
+● Temporarily stop service
+sudo systemctl stop XXX.service     # XXX is the service name
+● Temporarily start service
+sudo systemctl start XXX.service    # XXX is the service name
+● Disable service (remove auto-start at boot)
+sudo systemctl disable XXX.service  # XXX is the service name
+● Enable service (auto-start at boot)
+sudo systemctl enable XXX.service   # XXX is the service name
+[Notes] After each OTA update, the auto-start settings of all services will be reset to factory defaults. You will need to execute the disable command again to disable the corresponding services.
