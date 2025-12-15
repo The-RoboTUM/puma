@@ -1,5 +1,99 @@
 # Pedro's Notes
 
+### 2025.12.15
+### 🧾 Update Log & Collaboration Notes
+
+#### What was done
+
+- Integrated `sdk_deploy` as a **Git submodule** instead of copying SDK code into the main repository.
+- Forked the official SDK repository to enable team-specific development:
+  - **Official repository**: `DeepRoboticsLab/sdk_deploy`
+  - **Team fork**: `The-RoboTUM/PUMA_sdk_deploy`
+- Implemented SDK customizations:
+  - Added front and rear camera definitions
+  - Enabled real-time camera visualization in `rqt`
+  - Added `odom` TF for visualization in `RViz`
+
+---
+
+#### Why this structure is used
+
+- Keep the official SDK clean and easy to update
+- Allow team-specific customization without modifying upstream code
+- Lock (pin) the SDK to a specific, known-good commit for reproducibility
+- Follow industry-standard workflows used in robotics and large-scale software projects
+
+---
+
+#### How teammates should work with this repository
+
+##### Pulling and updating code
+
+- Always pull the **main PUMA repository** (not the SDK repo directly)
+- After pulling, always run:
+
+```bash
+git submodule update --init --recursive
+```
+
+This ensures the SDK submodule is checked out at the exact version required by the main project.
+
+---
+
+#### ⚠️ Important: How to commit and push changes (read carefully)
+
+##### ✅ Case 1: You modify files inside `external/sdk_deploy`
+
+- `external/sdk_deploy` is a **Git submodule** (a separate repository)
+- Changes must be committed and pushed **inside the submodule repository**
+
+**Correct workflow:**
+
+```bash
+cd external/sdk_deploy
+git add -A
+git commit -m "Describe your SDK change"
+git push
+```
+
+After pushing the SDK changes:
+
+```bash
+cd ../..
+git add external/sdk_deploy
+git commit -m "Update sdk_deploy submodule pointer"
+git push
+```
+
+> ❗ The main repository only records **which SDK commit is used**.  
+> It does **not** contain the SDK code itself.
+
+---
+
+##### ✅ Case 2: You modify files outside `external/` (main repository code)
+
+- These changes belong to the **main PUMA repository**
+- You can commit and push directly from the project root:
+
+```bash
+git add .
+git commit -m "Describe your main repository changes"
+git push
+```
+
+#### ❌ What NOT to do
+
+- ❌ Do **not** manually clone or pull the SDK repository separately
+- ❌ Do **not** run `git pull` inside `external/sdk_deploy` unless you are actively developing the SDK
+- ❌ Do **not** expect SDK changes to be pushed via the main repository
+
+---
+
+#### One-sentence takeaway
+
+> **SDK changes → push in the submodule repository**  
+> **Main project changes → push in the main repository**
+
 
 ### 2025.12.3
 ### Updating the Submodule (`external/sdk_deploy` — official SDk from Deep Robotics) to the Latest Official Version
