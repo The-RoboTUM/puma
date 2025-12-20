@@ -3,8 +3,10 @@ import sys
 import termios
 import tty
 import select
+import threading
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import SingleThreadedExecutor
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 
@@ -62,6 +64,9 @@ class LocalTeleop(Node):
         super().__init__('puma_local_teleop')
         self.pub_vel = self.create_publisher(Twist, '/cmd_vel', 10)
         self.pub_ctrl = self.create_publisher(String, '/puma/control', 10)
+        # Create a timer to keep the node "alive" for discovery
+        self.create_timer(0.1, lambda: None)
+        self.get_logger().info('Teleop node started, publishing to /cmd_vel and /puma/control')
 
     def send_vel(self, x, y, th):
         twist = Twist()
@@ -74,9 +79,9 @@ class LocalTeleop(Node):
         self.pub_vel.publish(twist)
 
     def send_control(self, cmd):
-        msg = String()
-        msg.data = cmd
-        self.pub_ctrl.publish(msg)
+        control_msg = String()
+        control_msg.data = cmd
+        self.pub_ctrl.publish(control_msg)
         print(f"\rSent Command: {cmd}            ", end="")
 
 def main():
@@ -84,13 +89,24 @@ def main():
     rclpy.init()
     node = LocalTeleop()
     
+    # Create executor and spin in background thread
+    executor = SingleThreadedExecutor()
+    executor.add_node(node)
+    spin_thread = threading.Thread(target=executor.spin, daemon=True)
+    spin_thread.start()
+    
     print(msg)
+    print("[INFO] Waiting for ROS2 discovery (2 seconds)...")
+    import time
+    time.sleep(2)  # Give DDS time to discover other nodes
+    print("[INFO] Ready! Press keys to control.")
+    
     x = 0.0
     y = 0.0
     th = 0.0
     
     try:
-        while True:
+        while rclpy.ok():
             key = getKey(settings)
             if key in moveBindings.keys():
                 x = moveBindings[key][0]
@@ -118,6 +134,7 @@ def main():
     finally:
         node.send_vel(0, 0, 0)
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+        executor.shutdown()
         rclpy.shutdown()
 
 if __name__ == '__main__':

@@ -13,6 +13,35 @@ import threading
 ROBOT_IP = "10.21.31.103"
 ROBOT_PORT = 30000
 
+# Protocol Constants (matching protocol.py)
+SYNC_BYTES = bytes([0xEB, 0x91, 0xEB, 0x90])
+
+def get_timestamp():
+    """Returns current time formatted for the robot protocol."""
+    return time.strftime("%Y-%m-%d %H:%M:%S")
+
+def build_header(payload_len, msg_id, is_json=True):
+    """Constructs the 16-byte protocol header (matching protocol.py)."""
+    return (
+        SYNC_BYTES +
+        struct.pack('<H', payload_len) +
+        struct.pack('<H', msg_id) +
+        bytes([0x01 if is_json else 0x00]) +
+        bytes(7)  # Reserved
+    )
+
+def create_json_payload(type_code, cmd_code, items=None):
+    """Creates a JSON payload encoded in bytes."""
+    payload = {
+        "PatrolDevice": {
+            "Type": type_code,
+            "Command": cmd_code,
+            "Time": get_timestamp(),
+            "Items": items or {}
+        }
+    }
+    return json.dumps(payload).encode('utf-8')
+
 class UdpBridge(Node):
     def __init__(self):
         super().__init__('udp_bridge')
@@ -21,82 +50,52 @@ class UdpBridge(Node):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.settimeout(0.1)
         
+        
+        # Message ID counter (matching teleop_robot.py)
+        self.message_id = 0
+        
         # Subscribers
         self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 10)
         self.create_subscription(String, '/puma/control', self.control_callback, 10)
         
-        # Heartbeat Timer (10 Hz)
+        # Heartbeat Timer (2 Hz to match HEARTBEAT_FREQ in protocol.py)
         self.create_timer(0.5, self.send_heartbeat)
         
         self.get_logger().info(f"UDP Bridge Started. Target: {ROBOT_IP}:{ROBOT_PORT}")
 
-    def pack_message(self, json_data):
-        """Packs JSON data into the binary protocol format."""
-        json_str = json.dumps(json_data)
-        data_bytes = json_str.encode('utf-8')
-        length = len(data_bytes)
-        
-        # Header (16 bytes)
-        # 0-3: Sync (EB 91 EB 90)
-        # 4-5: Length (Little Endian)
-        # 6: 0x01
-        # 7: 0x00
-        # 8: 0x01
-        # 9-15: Reserved (0)
-        header = bytearray(16)
-        header[0] = 0xEB
-        header[1] = 0x91
-        header[2] = 0xEB
-        header[3] = 0x90
-        header[4] = length & 0xFF
-        header[5] = (length >> 8) & 0xFF
-        header[6] = 0x01
-        header[7] = 0x00
-        header[8] = 0x01
-        
-        return header + data_bytes
-
-    def send_udp(self, payload):
+    def send_message(self, type_code, command_code, items=None):
+        """Send a message using the same protocol as teleop_robot.py"""
         try:
-            packet = self.pack_message(payload)
-            self.sock.sendto(packet, (ROBOT_IP, ROBOT_PORT))
+            payload = create_json_payload(type_code, command_code, items)
+            header = build_header(len(payload), self.message_id, is_json=True)
+            data = header + payload
+            
+            self.sock.sendto(data, (ROBOT_IP, ROBOT_PORT))
+            self.message_id = (self.message_id + 1) % 65536
         except Exception as e:
             self.get_logger().error(f"UDP Send Error: {e}")
 
     def send_heartbeat(self):
         """Sends Type 100 Heartbeat to keep connection alive."""
-        payload = {
-            "PatrolDevice": {
-                "Type": 100,
-                "Command": 100,
-                "Time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "Items": {}
-            }
-        }
-        self.send_udp(payload)
+        self.send_message(100, 100)
 
     def cmd_vel_callback(self, msg):
         """Translates /cmd_vel to Type 2 Command 21 (Motion Control)."""
-        # Map Twist to Robot Velocity
-        # Linear.x -> VelocityX
-        # Linear.y -> VelocityY
-        # Angular.z -> VelocityYaw
-        
-        payload = {
-            "PatrolDevice": {
-                "Type": 2,
-                "Command": 21,
-                "Items": {
-                    "VelocityX": float(msg.linear.x),
-                    "VelocityY": float(msg.linear.y),
-                    "VelocityYaw": float(msg.angular.z)
-                }
-            }
+        # Use same field names as teleop_robot.py: X, Y, Z, Roll, Pitch, Yaw
+        items = {
+            "X": float(msg.linear.x),
+            "Y": float(msg.linear.y),
+            "Z": 0.0,
+            "Roll": 0.0,
+            "Pitch": 0.0,
+            "Yaw": float(msg.angular.z)
         }
-        self.send_udp(payload)
+        self.send_message(2, 21, items)
+        self.get_logger().info(f"cmd_vel: X={msg.linear.x:.2f} Y={msg.linear.y:.2f} Yaw={msg.angular.z:.2f}")
 
     def control_callback(self, msg):
         """Translates /puma/control to Type 2 Command 22 (Motion State)."""
+        self.get_logger().info(f"Received control command: {msg.data}")
         cmd = msg.data.lower()
         state_id = None
         
@@ -112,16 +111,8 @@ class UdpBridge(Node):
             state_id = 17
             
         if state_id is not None:
-            payload = {
-                "PatrolDevice": {
-                    "Type": 2,
-                    "Command": 22,
-                    "Items": {
-                        "MotionState": state_id
-                    }
-                }
-            }
-            self.send_udp(payload)
+            # Use "MotionParam" instead of "MotionState" (matching teleop_robot.py)
+            self.send_message(2, 22, {"MotionParam": state_id})
             self.get_logger().info(f"Sent State Change: {cmd} ({state_id})")
 
 def main(args=None):

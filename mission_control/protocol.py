@@ -5,6 +5,7 @@ from datetime import datetime
 # Network Configuration
 ROBOT_IP = "10.21.31.103"
 ROBOT_PORT = 30001
+ROBOT_UDP_PORT = 30000
 HEARTBEAT_FREQ = 2.0
 
 # Protocol Constants

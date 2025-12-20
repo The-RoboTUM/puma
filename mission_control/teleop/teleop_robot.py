@@ -10,16 +10,20 @@ import select
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from protocol import (
-    ROBOT_IP, ROBOT_PORT, HEARTBEAT_FREQ,
+    ROBOT_IP, ROBOT_PORT, ROBOT_UDP_PORT, HEARTBEAT_FREQ,
     build_header, parse_header, create_json_payload
 )
+import socket
 
 CONTROL_FREQ = 20.0   # Hz for sending control commands
 
 class RobotClient:
-    def __init__(self, host=ROBOT_IP, port=ROBOT_PORT):
+    def __init__(self, host=ROBOT_IP, port=ROBOT_PORT, use_udp=True):
         self.host = host
         self.port = port
+        self.use_udp = use_udp
+        self.udp_port = ROBOT_UDP_PORT
+        self.socket = None
         self.reader = None
         self.writer = None
         self.message_id = 0
@@ -45,16 +49,28 @@ class RobotClient:
         self.on_message_received = None
 
     async def connect(self):
-        print(f"Connecting to {self.host}:{self.port}...")
-        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
+        print(f"Connecting to {self.host}:{self.port} (UDP={self.use_udp})...")
+        if self.use_udp:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.socket.setblocking(False)
+            # Bind to any available port to receive responses
+            self.socket.bind(('0.0.0.0', 0))
+            print(f"UDP Socket bound to {self.socket.getsockname()}")
+        else:
+            self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
         print("Connected!")
         self.running = True
 
     async def send_message(self, type_code, command_code, items=None):
         payload = create_json_payload(type_code, command_code, items)
         header = build_header(len(payload), self.message_id, is_json=True)
-        if self.writer:
-            self.writer.write(header + payload)
+        data = header + payload
+        
+        if self.use_udp and self.socket:
+            self.socket.sendto(data, (self.host, self.udp_port))
+            self.message_id = (self.message_id + 1) % 65536
+        elif self.writer:
+            self.writer.write(data)
             await self.writer.drain()
             self.message_id = (self.message_id + 1) % 65536
 
@@ -147,25 +163,51 @@ class RobotClient:
     async def listen_loop(self):
         while self.running:
             try:
-                header_data = await self.reader.readexactly(16)
-                payload_len, msg_id = parse_header(header_data)
-                
-                if payload_len and payload_len > 0:
-                    payload_data = await self.reader.readexactly(payload_len)
-                    if self.on_message_received:
-                        try:
-                            self.on_message_received(payload_data)
-                        except Exception as e:
-                            print(f"Callback error: {e}")
+                if self.use_udp:
+                    # UDP Receive
+                    # Note: sock_recv returns bytes. 
+                    # We assume the packet contains the full message for simplicity in UDP mode.
+                    if self.loop is None:
+                        self.loop = asyncio.get_running_loop()
+                        
+                    data = await self.loop.sock_recv(self.socket, 65536)
+                    
+                    if len(data) >= 16:
+                        header_data = data[:16]
+                        payload_len, msg_id = parse_header(header_data)
+                        
+                        if payload_len and len(data) >= 16 + payload_len:
+                            payload_data = data[16:16+payload_len]
+                            if self.on_message_received:
+                                try:
+                                    self.on_message_received(payload_data)
+                                except Exception as e:
+                                    print(f"Callback error: {e}")
+                else:
+                    # TCP Receive
+                    header_data = await self.reader.readexactly(16)
+                    payload_len, msg_id = parse_header(header_data)
+                    
+                    if payload_len and payload_len > 0:
+                        payload_data = await self.reader.readexactly(payload_len)
+                        if self.on_message_received:
+                            try:
+                                self.on_message_received(payload_data)
+                            except Exception as e:
+                                print(f"Callback error: {e}")
             except asyncio.IncompleteReadError:
                 print("Disconnected")
                 self.running = False
                 break
-            except Exception:
-                break
+            except Exception as e:
+                # print(f"Listen error: {e}")
+                await asyncio.sleep(0.1) # Prevent tight loop on error
+                pass
 
     async def close(self):
         self.running = False
+        if self.use_udp and self.socket:
+            self.socket.close()
         if self.writer:
             self.writer.close()
             await self.writer.wait_closed()

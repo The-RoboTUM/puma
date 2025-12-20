@@ -52,7 +52,8 @@ class Dashboard(QMainWindow):
         self.control_mode = "KEYBOARD"
 
         # --- Robot Client Setup ---
-        self.client = RobotClient(ROBOT_IP, ROBOT_PORT)
+        # Switched to UDP as requested
+        self.client = RobotClient(ROBOT_IP, ROBOT_PORT, use_udp=True)
         self.client.on_message_received = self.on_robot_message
         
         # Start Asyncio Thread
