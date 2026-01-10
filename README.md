@@ -1,5 +1,89 @@
 # Pedro's Notes
 
+
+### 2026.1.10
+### 🧾 Update Log
+
+
+#### ✅ Added
+
+- **Introduced MuJoCo-LiDAR:** Integrated `mujoco-lidar==0.2.5` into the simulation environment for point cloud generation and publishing (dependencies managed via Poetry + `pyproject.toml`).
+- **Stable camera & LiDAR streaming:** Improved the robustness of camera and point cloud publishing/visualization in simulation by tuning **ROS 2 QoS** settings (especially for displaying `PointCloud2` in RViz2).
+
+#### 🔧 Changed
+
+- **Updated MuJoCo simulation scripts & MJCF in `sdk_deploy`:** Added camera and LiDAR, and ensured they can run together reliably.
+- **Added `env.sh` environment script:** Unified terminal environment setup (e.g., `ROS_DISTRO`, Python, dependencies).
+
+#### 📔 Notes
+
+- Reproducing the setup requires **4 terminals** (MuJoCo sim / `rl_deploy` / `rqt` / `rviz2`).
+- In RViz2, it’s recommended to set **PointCloud2** to **Best Effort** to improve real-time display stability (avoids missing point clouds due to QoS mismatch).
+- 
+
+#### Reproduction Steps (4 Terminals)
+
+Recommended to run in **VS Code**.  
+Before running any commands in each terminal, **source the environment script**.
+
+##### 0) Common setup for every new terminal
+
+After opening a new terminal in VS Code, run:
+
+```bash
+source ~/Maxwell\ Robotics/puma/external/sdk_deploy/env.sh
+```
+
+##### 1) Verify environment consistency (recommended for every new terminal)
+
+Run:
+
+```bash
+python3 -V
+python3.12 -V
+echo $ROS_DISTRO
+python3.12 -c "import rclpy; print('rclpy ok')"
+python3.12 -c "import drdds; print('drdds ok')"
+```
+
+**Expected:** Python versions and `ROS_DISTRO` are consistent; both `rclpy ok` and `drdds ok` print successfully.
+
+
+##### Startup order (recommended: 1 → 4)
+
+**Terminal 1:** Start MuJoCo simulation (camera + LiDAR)
+
+```bash
+python3.12 src/M20_sdk_deploy/interface/robot/simulation/mujoco_simulation_ros2.py
+```
+
+**Terminal 2:** Start RL Deploy node
+
+```bash
+ros2 run rl_deploy rl_deploy
+```
+
+**Terminal 3:** Open rqt (visualization for front and rear cameras)
+
+```bash
+rqt
+```
+
+**Terminal 4:** Open RViz2 (visualization for front and rear LiDARs)
+
+```bash
+rviz2
+```
+#### Required RViz2 setting (PointCloud2 QoS)
+
+In RViz2, for the **PointCloud2** display item:
+
+- Set **QoS Reliability** to: **Best Effort**
+
+If not set, the point cloud may not be received or may appear intermittently (a typical QoS mismatch symptom).
+
+---
+
 ### 2025.12.15
 ### 🧾 Update Log & Collaboration Notes
 
