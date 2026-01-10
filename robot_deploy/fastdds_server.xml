@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+    <participant profile_name="participant_wifi" is_default_profile="true">
+        <rtps>
+            <builtin>
+                <discovery_config>
+                    <discoveryProtocol>SIMPLE</discoveryProtocol>
+                </discovery_config>
+                <!-- Announce on WiFi interface so clients can discover -->
+                <metatrafficUnicastLocatorList>
+                    <locator>
+                        <udpv4>
+                            <address>10.21.41.1</address>
+                        </udpv4>
+                    </locator>
+                </metatrafficUnicastLocatorList>
+                <!-- Listen for clients on WiFi network -->
+                <initialPeersList>
+                    <locator>
+                        <udpv4>
+                            <address>10.21.41.255</address>
+                        </udpv4>
+                    </locator>
+                </initialPeersList>
+            </builtin>
+        </rtps>
+    </participant>
+</profiles>
