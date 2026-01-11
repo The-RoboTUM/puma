@@ -1,0 +1,39 @@
+cat > ~/fastdds_peers.xml <<'XML'
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <participant profile_name="peer_participant" is_default_profile="true">
+    <rtps>
+      <builtin>
+        <!-- 用单播 peers 强制发现 -->
+        <initialPeersList>
+          <locator>
+            <udpv4>
+              <address>10.21.33.103</address>
+              <port>7400</port>
+            </udpv4>
+          </locator>
+          <locator>
+            <udpv4>
+              <address>10.21.31.103</address>
+              <port>7400</port>
+            </udpv4>
+          </locator>
+        </initialPeersList>
+      </builtin>
+
+      <!-- 不限制网卡的话可以先不写 interfaceWhiteList -->
+      <!-- 如果你怀疑多网卡干扰，再加白名单 -->
+      <!--
+      <defaultUnicastLocatorList>
+        <locator>
+          <udpv4>
+            <address>172.23.2.36</address>
+          </udpv4>
+        </locator>
+      </defaultUnicastLocatorList>
+      -->
+
+    </rtps>
+  </participant>
+</profiles>
+XML
