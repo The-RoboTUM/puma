@@ -12,7 +12,8 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPo
 
 from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import TransformStamped, Twist
+from std_msgs.msg import String
 from tf2_ros import TransformBroadcaster
 
 
@@ -33,6 +34,11 @@ def quat_from_rpy(roll: float, pitch: float, yaw: float) -> Tuple[float, float, 
     qy = cr * sp * cy + sr * cp * sy
     qz = cr * cp * sy - sr * sp * cy
     return qx, qy, qz, qw
+
+
+def apply_deadband(x: float, deadband: float) -> float:
+    """Zero-out small values within deadband."""
+    return 0.0 if abs(x) < deadband else x
 
 
 class PatrolUdpBridge(Node):
@@ -58,6 +64,11 @@ class PatrolUdpBridge(Node):
         self.declare_parameter("heartbeat_type", 100)      # Type=100
         self.declare_parameter("heartbeat_cmd", 100)       # Command=100
 
+        # --- Drift fix (方案 A) ---
+        self.declare_parameter("vel_deadband", 0.01)          # m/s
+        self.declare_parameter("yaw_rate_deadband", 0.02)     # rad/s
+        self.declare_parameter("freeze_when_stationary", True)
+
         # Debug
         self.declare_parameter("debug_log", False)
         self.declare_parameter("debug_log_every_n", 200)   # print every N motion packets
@@ -77,6 +88,10 @@ class PatrolUdpBridge(Node):
         self.heartbeat_rate_hz = float(self.get_parameter("heartbeat_rate_hz").value)
         self.heartbeat_type = int(self.get_parameter("heartbeat_type").value)
         self.heartbeat_cmd = int(self.get_parameter("heartbeat_cmd").value)
+
+        self.vel_deadband = float(self.get_parameter("vel_deadband").value)
+        self.yaw_rate_deadband = float(self.get_parameter("yaw_rate_deadband").value)
+        self.freeze_when_stationary = bool(self.get_parameter("freeze_when_stationary").value)
 
         self.debug_log = bool(self.get_parameter("debug_log").value)
         self.debug_log_every_n = int(self.get_parameter("debug_log_every_n").value)
@@ -108,6 +123,10 @@ class PatrolUdpBridge(Node):
         self.pub_odom = self.create_publisher(Odometry, "/odom", sensor_qos)
         self.tf_broadcaster = TransformBroadcaster(self)
 
+        # ---------------- Subscribers for teleop ----------------
+        self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_callback, 10)
+        self.create_subscription(String, "/puma/control", self.control_callback, 10)
+
         # ---------------- State for odom integration ----------------
         self.x = 0.0
         self.y = 0.0
@@ -137,8 +156,69 @@ class PatrolUdpBridge(Node):
             f"Listening UDP on {self.listen_ip}:{self.listen_port} ; "
             f"robot={self.robot_ip}:{self.robot_port} ; "
             f"publishing /imu /odom /tf ({self.odom_frame}->{self.base_frame}) ; "
-            f"heartbeat={'ON' if self.hb_timer else 'OFF'}"
+            f"subscribing /cmd_vel /puma/control ; "
+            f"heartbeat={'ON' if self.hb_timer else 'OFF'} ; "
+            f"deadband(v={self.vel_deadband}, yaw_rate={self.yaw_rate_deadband}) ; "
+            f"freeze_when_stationary={self.freeze_when_stationary}"
         )
+
+    # ---------------- ROS2 -> Robot (Teleop Commands) ----------------
+    def cmd_vel_callback(self, msg: Twist):
+        """Handle /cmd_vel messages and send Type 2 Command 21 to robot."""
+        items = {
+            "X": float(msg.linear.x),
+            "Y": float(msg.linear.y),
+            "Z": 0.0,
+            "Roll": 0.0,
+            "Pitch": 0.0,
+            "Yaw": float(msg.angular.z)
+        }
+        self._send_control_message(2, 21, items)
+
+    def control_callback(self, msg: String):
+        """Handle /puma/control messages and send Type 2 Command 22 to robot."""
+        cmd = msg.data.lower()
+        state_map = {
+            "stand": 1,
+            "sit": 4,
+            "damping": 3,
+            "standard": 6,
+            "rl": 17
+        }
+
+        state_id = state_map.get(cmd)
+        if state_id is not None:
+            self._send_control_message(2, 22, {"MotionParam": state_id})
+            self.get_logger().info(f"Sent motion state: {cmd} ({state_id})")
+        else:
+            self.get_logger().warn(f"Unknown control command: {cmd}")
+
+    def _send_control_message(self, type_code: int, command_code: int, items: dict):
+        """Send control message to robot using same protocol as heartbeat."""
+        try:
+            payload = json.dumps({
+                "PatrolDevice": {
+                    "Type": type_code,
+                    "Command": command_code,
+                    "Time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "Items": items
+                }
+            }).encode("utf-8")
+
+            header = (
+                SYNC +
+                int.to_bytes(len(payload), 2, "little", signed=False) +
+                int.to_bytes(self.hb_msg_id & 0xFFFF, 2, "little", signed=False) +
+                b"\x01" +
+                b"\x00" * 7
+            )
+
+            packet = header + payload
+            self.sock.sendto(packet, (self.robot_ip, self.robot_port))
+            self.hb_msg_id = (self.hb_msg_id + 1) & 0xFFFF
+
+        except Exception as e:
+            self.get_logger().error(f"Failed to send control message: {e}")
 
     # ---------------- Heartbeat ----------------
     def _make_heartbeat_packet(self, msg_id: int) -> bytes:
@@ -151,7 +231,6 @@ class PatrolUdpBridge(Node):
             }
         }).encode("utf-8")
 
-        # 你之前格式：SYNC + len(payload) + msg_id + 0x01 + 7 bytes 0
         header = (
             SYNC +
             int.to_bytes(len(payload), 2, "little", signed=False) +
@@ -221,7 +300,7 @@ class PatrolUdpBridge(Node):
             c = pd.get("Command", None)
             items = pd.get("Items", {})
 
-            # Command=4 has MotionStatus (from your dumps)
+            # Command=4 has MotionStatus
             if t == 1002 and c == 4:
                 motion = items.get("MotionStatus", {})
                 self.rx_motion += 1
@@ -243,12 +322,18 @@ class PatrolUdpBridge(Node):
         vy_body = float(motion.get("LinearY", 0.0))
         height = float(motion.get("Height", 0.0))
 
+        # --- 方案 A：deadband，杀掉静止偏置 ---
+        vx_body = apply_deadband(vx_body, self.vel_deadband)
+        vy_body = apply_deadband(vy_body, self.vel_deadband)
+        omega_z = apply_deadband(omega_z, self.yaw_rate_deadband)
+
         now = self.get_clock().now()
         now_sec = now.nanoseconds * 1e-9
 
         if self.last_t is None:
             self.last_t = now_sec
             self.z = height
+            # 初次不积分，但仍可发布一次（这里选择不发布，避免 dt=0）
             return
 
         dt = now_sec - self.last_t
@@ -262,9 +347,18 @@ class PatrolUdpBridge(Node):
         vx = cy * vx_body - sy * vy_body
         vy = sy * vx_body + cy * vy_body
 
-        self.x += vx * dt
-        self.y += vy * dt
-        self.z = height
+        # --- 方案 A：静止时不积分（freeze），防漂 ---
+        stationary = (vx_body == 0.0 and vy_body == 0.0 and omega_z == 0.0)
+        if self.freeze_when_stationary and stationary:
+            # 不更新 x/y（不积分）；但高度还是更新（如果你希望高度也冻结，可以把这行注释掉）
+            self.z = height
+            vx = 0.0
+            vy = 0.0
+            omega_z = 0.0
+        else:
+            self.x += vx * dt
+            self.y += vy * dt
+            self.z = height
 
         qx, qy, qz, qw = quat_from_rpy(roll, pitch, yaw)
 
@@ -295,6 +389,7 @@ class PatrolUdpBridge(Node):
         odom.pose.pose.orientation.z = qz
         odom.pose.pose.orientation.w = qw
 
+        # twist：如果静止被判定，vx/vy 会是 0（更符合“静止”）
         odom.twist.twist.linear.x = vx
         odom.twist.twist.linear.y = vy
         odom.twist.twist.angular.z = omega_z
