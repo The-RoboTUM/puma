@@ -7,6 +7,7 @@
             <interfaceWhiteList>
                 <address>127.0.0.1</address>
                 <address>10.21.33.103</address>
+                <address>10.21.41.1</address>
             </interfaceWhiteList>
             <non_blocking_send>true</non_blocking_send>
         </transport_descriptor>
@@ -25,6 +26,7 @@
                 </discovery_config>
             </builtin>
 
+            <!-- UDP only - no SHM to avoid permission issues -->
             <userTransports>
                 <transport_id>udp_transport</transport_id>
             </userTransports>

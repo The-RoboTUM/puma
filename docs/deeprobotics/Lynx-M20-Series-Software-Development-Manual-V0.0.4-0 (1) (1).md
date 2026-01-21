@@ -2165,6 +2165,844 @@ DEEP Robotics
 
 ---
 
+1.4 ASDU Message Set (Inspection Type)
+[Notes]  The ASDU message set contained in this section is only supported by the M20 Pro. The M20 does not support the commands in this section.
+
+1.4.1 Location Initialization and Reset
+You can control robot to initialize and reset location by this request.
+Type 
+Command 
+Message type
+2101
+1
+Location Initialization and Rest
+Request
+JSON request:
+{
+    "PatrolDevice": {
+    "Type": 2101,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    "PosX":0.0,
+    "PosY":0.0,
+    "PosZ":0.0,
+    "Yaw":0.0
+    }
+    }
+}
+XML request:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>  
+    <Type>2101</Type>
+    <Command>1</Command>  
+    <Time>2023-01-01 00:00:00</Time>
+    <Items>
+    <PosX>0.0</PosX>
+    <PosY>0.0</PosY>
+    <PosZ>0.0</PosZ>
+    <Yaw>0.0</Yaw>
+    </Items>
+</PatrolDevice>
+In this request message, the Items field contains the following parameters: 
+Parameters 
+Meaning 
+Type
+PosX/PosY/PosZ
+Coordinates that need to be repositioned in the map coordinate system[8](m)
+float
+Yaw
+Attitude angle of the robot rotating around the Z-axis in the map coordinate system[8](rad)
+float
+[8] The conversion formula for the robot position in Map Coordinate System and Pixel Coordinate System is as follows:
+\left\{\begin{array}{l}
+x_{p}=\frac{\operatorname{Pos} X-X 0}{\operatorname{Res}} \\
+\\
+y_{p}=H-\frac{\operatorname{Pos} Y-Y 0}{\operatorname{Res}}
+\end{array} \quad\left(x_{p}, y_{p} \text { are rounded down }\right)\right.
+
+
+Map Coordinate System
+Pixel Coordinate System
+(x_{p}, y_{p})is the coordinate values in Pixel Coordinate System.The remaining parameter information is located in the occ_grid.yaml file. Please refer to the https://alidocs.dingtalk.com/i/nodes/YMyQA2dXW79PAgZPCDoKA70QJzlwrZgb?utm_scene=team_space to view the parameters in the occ_grid.yaml file in the map folder.
+Response
+JSON response:
+{
+    "PatrolDevice": {
+    "Type": 2101,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    "ErrorCode":0
+    }
+    }
+}
+XML response:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>
+    <Type>2101</Type>
+    <Command>1</Command>
+    <Time>2023-01-01 00:00:01</Time>
+    <Items>
+    <ErrorCode>1</ErrorCode>
+    </Items>
+</PatrolDevice>
+In this response message, the items field contains the following parameters:
+Parameters
+Meaning 
+Type
+Value
+ErrorCode
+The result of executing the location initialization command
+int
+Success = 0
+Failure = 1
+
+1.4.2 Obtain location information in the map coordinate system
+You can obtain the robot's current location information in the map coordinate system by this request.
+Type 
+Command 
+Message type
+1007
+2
+Obtain location information in the map coordinate system
+Request
+JSON request:
+{
+    "PatrolDevice": {
+    "Type": 1007,
+    "Command": 2,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    }
+    }
+}
+XML request:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>  
+    <Type>1007</Type>
+    <Command>2</Command>  
+    <Time>2023-01-01 00:00:00</Time>
+    <Items>
+    </Items>
+</PatrolDevice>
+In this request message, the Items field does not contain any parameter item.
+Response
+JSON response:
+{
+    "PatrolDevice": {
+    "Type": 1007,
+    "Command": 2,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    "Location":1,
+    "PosX":0.0,
+    "PosY":0.0,
+    "PosZ":0.0,
+    "Roll":0.0,
+    "Pitch":0.0,
+     "Yaw":0.0
+    }
+    }
+}
+XML response:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>
+    <Type>1007</Type>
+    <Command>2</Command>
+    <Time>2023-01-01 00:00:01</Time>
+    <Items>
+    <Location>1</Location>
+    <PosX>0.0</PosX>
+    <PosY>0.0</PosY>
+    <PosZ>0.0</PosZ>
+    <Roll>0.0</Roll>
+    <Pitch>0.0</Pitch>
+    <Yaw>0.0</Yaw>
+    </Items>
+</PatrolDevice>
+In this response message, the items field contains the following parameters:
+Parameters
+Meaning 
+Type
+Value
+Location
+Location status
+int
+Normal location = 0
+Location lost = 1
+PosX/Y/Z
+Robot coordinates in the map coordinate system[8](m)
+float
+ 
+Roll/Pitch/Yaw
+Robot attitude angle in the map coordinate system[8](rad)
+float
+ 
+
+1.4.3 Obtain perception software status information in navigation
+You can obtain perception software status information in robot navigation by this request.
+Type 
+Command 
+Message type
+2002
+1
+obtain perception software status information in navigation
+Request
+JSON request:
+{
+    "PatrolDevice": {
+    "Type": 2002,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    }
+    }
+}
+XML request:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>  
+    <Type>2002</Type>
+    <Command>1</Command>  
+    <Time>2023-01-01 00:00:00</Time>
+    <Items>
+    </Items>
+</PatrolDevice>
+In this request message, the Items field does not contain any parameter item.
+Response
+JSON response:
+{
+    "PatrolDevice": {
+    "Type": 2002,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    "Location":1,
+    "ObsState":0.0
+    }
+    }
+}
+XML response:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>
+    <Type>2002</Type>
+    <Command>1</Command>
+    <Time>2023-01-01 00:00:01</Time>
+    <Items>
+    <Location>1</Location>
+    <ObsState>0.0</ObsState>
+    </Items>
+</PatrolDevice>
+In this response message, the items field contains the following parameters:
+Parameters
+Meaning 
+Type
+Value
+Location
+Location status
+int
+Normal location = 0
+Location lost = 1
+ObsState
+Whether in obstacle state
+int
+Not in obstacle avoidance mode = 0
+In obstacle avoidance mode = 1
+
+1.4.4 Issue Navigation Task
+You can issue the navigation task by this request, that is, go to a target point and execute the tasks at this target point.
+Type 
+Command 
+Message type
+1003
+1
+Issue the navigation task
+[Notes] After receiving the request, and the robot will first execute the navigation task (successful/failed/cancelled) issued by user, then will send a response message to the client.
+Request
+JSON request:
+{
+    "PatrolDevice": {
+    "Type": 1003,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+             "Value": 0,
+             "MapID": 0,
+             "PosX": 0,
+             "PosY": 0,
+             "PosZ": 0,
+             "AngleYaw": 0,
+             "PointInfo": 0,
+             "Gait": 0,
+             "Speed": 0,
+             "Manner": 0,
+             "ObsMode": 0,
+             "NavMode": 0
+    }
+    }
+}
+XML request:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>  
+    <Type>1003</Type>
+    <Command>1</Command>  
+    <Time>2023-01-01 00:00:00</Time>
+    <Items>
+    <Value>0</Value>  
+    <MapID>0</MapID>  
+    <PosX>0.0</PosX>  
+    <PosY>0.0</PosY>  
+    <PosZ>0.0</PosZ>  
+    <AngleYaw>0.0</AngleYaw>  
+    <PointInfo>0</PointInfo>  
+    <Gait>0</Gait>  
+    <Speed>0</Speed>  
+    <Manner>0</Manner>  
+    <ObsMode>0</ObsMode>  
+    <NavMode>0</NavMode>  
+    </Items>
+</PatrolDevice>
+In this request message, the Items field contains several parameters which can be used for setting the navigation tasks.
+[Notes]  The paramters are divided into two types: point parameter and path parameter. Point parameter defines the target point, such as the serial number <Value>, type <PointInfo>, position <PosX>/<PosY>/<PosZ>, orientation <AngleYaw> of the target point. Path parameter specifies robot's movement from current to target point, such as <Gait>, <Speed>, <Manner>, <ObsMode>, <NavMode> the robot used on the way to the target point.
+The meaning of each parameter with their specific definitions is as follows:
+Parameters
+Meaning 
+Type
+Value
+Value
+No. of the target point
+int
+ 
+MapID
+No. of the grid map where the target point is located
+int
+No meaning at the moment
+PosX/PosY/PosZ
+Position of the target point in Map Coordinate System (m) 
+float
+ 
+AngleYaw
+Orientation of the target point in Map Coordinate System (rad)
+float
+ 
+PointInfo
+Type of the target point[9]
+int
+Transition point = 0
+Task point = 1
+Charge point = 3
+Gait
+Gait on the way to the target point[10]
+int
+Flat (Agile Motion Mode) = 0x3002
+Stair (Agile Motion Mode) = 0x3003
+Speed
+Velocity on the way to the target point 
+int
+Normal speed = 0
+Low speed = 1
+High speed = 2
+Manner
+Mode of motion on the way to the target point 
+int
+Walk forward = 0
+Walk backward = 1
+ObsMode
+Whether to enable the navigation module to avoid obstacles when arriving at the target point[11]
+int
+Enable = 0
+Disable = 1
+NavMode
+Navigation mode on the way to the target point[12]
+int
+Straight = 0 
+Auto = 1 
+[9] There are four types of target points: transition point, task point and charge point. 
+1. Transition point: Only used to overcome terrain and constrain paths with low positioning accuracy.
+2. Task point: With high precision in reaching the designated point. Once the robot arrives at the task point, it will stop moving to maintain its position for executing tasks such as recognizing meters during inspections, until receiving the request for next target point.
+3. Charge point: Only used to identify and locate the reflective piles in front of the charging dock. Once the robot arrives at the charge point, it will autonomously enter the charging dock and keep charging until receiving the next target point.
+[10] For the gaits that can be performed in navigation: 
+1. Flat Gait: Suitable for flat surfaces, grass terrain, and supports climbing slopes up to ≤30°; 
+2. Stair Gait: Suitable for traversing obstacles such as slopes (≤30°) and stairs (≤25 cm).
+[11] Whether the obstacle avoidance function of the navigation module is enabled or not, the obstacle avoidance function based on the local elevation map, as a safety module of the robot itself, will always remain enabled. When the obstacle avoidance function of the navigation is enabled, for Straight navigation, the robot will stop at an obstacle, and for Auto navigation, it behaves as obstacle avoidance.
+[12] When using the Straight navigation, if two points cannot be planned globally in a straight line, the navigation task will fail. When using the Auto navigation, the path points should be set based on terrain complexity. The higher the terrain complexity, the higher the execution risk of the navigation path, and in this case, the more intensive target points should be set. Try to use multi-segment Straight navigation instead of Auto navigation. 
+
+[Notes] When using Straight NavMode to control the robot climbing stairs , it is recommended to set the target point at least 45 cm beyond the edge of the last stair step. Additionally, the navigation system's ObsMode must be disabled.
+[Notes] When using Auto NavMode, only Flat gait and Low Speed mode are supported.
+Response
+JSON response:
+{
+    "PatrolDevice": {
+    "Type": 1003,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    "Value":0,
+    "Status":0,
+    "ErrorCode":0
+    }
+    }
+}
+XML response:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>  
+    <Type>1003</Type>
+    <Command>1</Command>  
+    <Time>2023-01-01 00:00:01</Time>
+    <Items>
+    <Value>0</Value>
+    <Status>0</Status>
+    <ErrorCode>0</ErrorCode>
+    </Items>
+</PatrolDevice>
+In this response message, the items field contains the following parameters:
+Parameters
+Meaning
+Type
+Value
+Value
+No. of the target point in navigation task 
+int
+Correspond to the request for issuing the navigation task 
+Status
+Execution state of navigation task 
+int
+Idle = 0
+Exiting charging station = 1
+Navigation preprocessing = 2
+Navigating = 3
+Navigation complete = 4
+Entering charging dock = 5
+Paused = 0xff
+ErrorCode
+Error code
+/
+Check the table below
+The meaning of the value of ErrorCode is shown in the following table:
+Value
+Meaning
+Value
+Meaning
+0
+Default value
+0xA328
+Failed to switch to navigation mode
+0x2300
+Single point navagation task cancelled
+0xA341
+Failed to issue a new task while currently executing a task
+0x2302
+Single point navagation task executed successfully
+0xA343
+Failed to exit from charging dock
+0xA301
+Abnormal motion state(soft stop or fall)
+0xA34B
+Persistent stop at an obstacle(over 30s)
+0xA302
+Battery level below 20%
+0xA34C
+Navigation global planning failure
+0xA303
+Motor overtemperature
+0xA34D
+Continuous navigation speed not updated, navigation failed
+0xA312
+Navigation module communication is abnormal, unable to issue tasks
+0xA34E
+Failure to issue a task during autonomous charging process
+0xA313
+Location abnormal (over 30s)
+ 
+ 
+
+1.4.5 Cancel Navigation Task
+You can cancel the navigation task that is being executed currently by this request, even if it terminates.
+Type 
+Command 
+Message type
+1004
+1
+Cancel the navigation task
+Request
+JSON request:
+{
+    "PatrolDevice": {
+    "Type": 1004,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    }
+    }
+}
+XML request:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>  
+    <Type>1004</Type>
+    <Command>1</Command>  
+    <Time>2023-01-01 00:00:00</Time>
+    <Items/>
+</PatrolDevice>
+In this request message, the Items field does not contain any parameter item.
+Response
+JSON response:
+{
+    "PatrolDevice": {
+    "Type": 1004,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    "ErrorCode":0
+    }
+    }
+}
+XML response:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>
+    <Type>1004</Type>
+    <Command>1</Command>
+    <Time>2023-01-01 00:00:01</Time>
+    <Items>
+    <ErrorCode>1</ErrorCode>
+    </Items>
+</PatrolDevice>
+In this response message, the items field contains the following parameters:
+Parameters
+Meaning
+Type
+Value
+ErrorCode
+Error code
+int
+Success = 0
+Failure = 1
+
+1.4.6 Query the Execution State of Navigation Task
+You can query the execution state of navigation task by this request. 
+Type 
+Command 
+Message type
+1007
+1
+Query execution state of navigation task
+Request
+JSON request:
+{
+    "PatrolDevice": {
+    "Type": 1007,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    }
+    }
+}
+XML request:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>  
+    <Type>1007</Type>
+    <Command>1</Command>  
+    <Time>2023-01-01 00:00:00</Time>
+    <Items/>  
+</PatrolDevice>
+In this request message, the Items field does not contain any parameter item.
+Response
+JSON response:
+{
+    "PatrolDevice": {
+    "Type": 1007,
+    "Command": 1,
+    "Time": "2023-01-01 00:00:00",
+    "Items": {
+    "Value":0,
+    "Status":0,
+    "ErrorCode":0
+    }
+    }
+}
+XML response:
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrolDevice>  
+    <Type>1007</Type>
+    <Command>1</Command>  
+    <Time>2023-01-01 00:00:01</Time>
+    <Items>
+    <Value>0</Value>
+    <Status>0</Status>
+    <ErrorCode>0</ErrorCode>
+    </Items>
+</PatrolDevice>
+In this response message, the items field contains the following parameters:
+Parameters
+Meaning
+Type
+Value
+Value
+No. of the target point in navigation task 
+int
+Correspond to the request for issuing the navigation task 
+Status
+Execution state of navigation task 
+int
+Idle = 0
+Exiting charging station = 1
+Navigation preprocessing = 2
+Navigating = 3
+Navigation complete = 4
+Entering charging dock = 5
+Paused = 0xff
+ErrorCode
+Error code
+/
+Check the table below
+The meaning of the value of ErrorCode is shown in the following table:
+Value
+Meaning
+Value
+Meaning
+0
+Default value
+0xA328
+Failed to switch to navigation mode
+0x2300
+Single point navagation task cancelled
+0xA341
+Failed to issue a new task while currently executing a task
+0x2302
+Single point navagation task executed successfully
+0xA343
+Failed to exit from charging dock
+0xA301
+Abnormal motion state(soft stop or fall)
+0xA34B
+Persistent stop at an obstacle(over 30s)
+0xA302
+Battery level below 20%
+0xA34C
+Navigation global planning failure
+0xA303
+Motor overtemperature
+0xA34D
+Continuous navigation speed not updated, navigation failed
+0xA312
+Navigation module communication is abnormal, unable to issue tasks
+0xA34E
+Failure to issue a task during autonomous charging process
+0xA313
+Location abnormal (over 30s)
+ 
+ 
+[Notes]  If the query shows that the navigation task cannot be executed, please check whether the navigation program has not been started or it is abnormal.
+
+
+
+2 ROS2 Topics
+This section describes ROS2 topics in Lynx M20 robot, some topics use custom ROS 2 message types.
+[Notes] Before using ROS2 tools to receive topics, check frequencies, etc., you need to source the environment variables with: source /opt/robot/scripts/setup_ros2.sh.
+[Notes] Before using ROS 2 tools to subscribe to topics, check message frequencies, etc., it is recommended to obtain administrator privileges via su to ensure that the relevant commands can be executed properly.
+
+2.1 Topics of Sensor Driver
+The topics in this section are all published to the topics upon robot power-up, and developers can subscribe to topics for sensor data.
+Topic Name
+Description
+Message Type
+Frequency
+/IMU
+Generic format IMU data topic
+sensor_msgs/msg/Imu
+200Hz
+/LIDAR/POINTS
+Generic format point cloud data topic
+sensor_msgs/msg/PointCloud2
+10Hz
+[Notes] The /LIDAR/POINTS topic depends on the multicast-relay.service service. If the topic has no data, please refer to Appendix 2 to check the service status and enable or disable the corresponding service as needed.
+[Notes]  You must obtain administrator (root) privileges via su to access data from the /LIDAR/POINTS topic.
+[Notes]  The /LIDAR/POINTS topic is restricted to transmission only by the robot’s host. If external access is required, please contact technical support.
+
+
+
+2.2 Motion-related Topics
+[Notes] The topics in this section depend on the rl_deploy service. If the topic message does not respond or topic messages cannot be received, please refer to Appendix 2 to check the service status and enable or disable the corresponding services as needed.
+
+2.2.1 Motion State Switching
+The topic is activated when the motion program is started, and developers can publish messages to the topic to switch the motion state.
+Topic Name
+Description
+Message Type
+/MOTION_STATE
+motion state[1] switching command
+drdds/msg/MotionState
+The message type drdds/msg/MotionState for the topic /MOTION_STATE is a custom message type that contains drdds::msg::MetaType and drdds::msg::MotionStateValue:
+MetaType header
+  uint64 frame_id
+  Timestamp timestamp
+    int32 sec
+    uint32 nsec
+MotionStateValue data
+      int32 state
+The state field of the topic message that needs to be published to set different motion states is shown in the table below:
+State to Be Set
+Field Value to Be Published
+Idle
+0
+Stand
+1
+Soft Emergency Stop
+2
+Power-on Damping
+3
+Sit
+4
+RL Control
+17
+[1] The conversion relationship of the robot's motion state is shown in the figure below:
+
+[Notes] In the RL control state, there are two modes: standard motion mode and agile motion mode. The standard motion mode is suitable for manual control, while the agile motion mode offers better gait speed response performance and is suitable for navigation and other autonomous algorithm development.
+Developers who want to subscribe to the topic in their own programs need to define the structure of this custom message type in codes.
+
+2.2.2 Gait Switching
+The topic is activated when the motion program is started, and developers can publish messages to the topic to switch the gait.
+Topic Name
+Description
+Message Type
+/GAIT
+gait switching command
+drdds/msg/Gait
+The message type drdds/msg/Gait for the topic /GAIT is a custom message type that contains drdds::msg::MetaType and drdds::msg::GaitValue:
+MetaType header
+  uint64 frame_id
+  Timestamp timestamp
+    int32 sec
+    uint32 nsec
+GaitValue data
+      uint32 gait
+The gait field of the topic message that needs to be published to switch gait is shown in the table below:
+Gait to Be Set
+Field Value to Be Published
+Flat Gait (Agile Moton Mode)
+0x3002
+Stair Gait (Agile Moton Mode)
+0x3003
+Developers who want to subscribe to the topic in their own programs need to define the structure of this custom message type in codes.
+
+2.2.3 Obtain Basic Motion State and Gait
+This topic is published to the topics upon robot power-up, and developers can subscribe to this topic to obtain basic motion status and gait information.
+Topic Name
+Description
+Message Type
+Frequency
+/MOTION_INFO
+Basic motion state and gait of the robot
+drdds/msg/MotionInfo
+20Hz
+The message type drdds/msg/MotionInfo for the topic /MOTION_INFO is a custom message type that contains drdds::msg::MetaType and drdds::msg::MotionInfoValue:
+MetaType header
+  uint64 frame_id
+  Timestamp timestamp
+    int32 sec
+    uint32 nsec
+MotionInfoValue data
+  float32 vel_x
+  float32 vel_y
+  float32 vel_yaw 
+  float32 height
+  MotionStateValue data
+    int32 state
+  GaitValue data
+    uint32 gait
+  float32 payload
+  float32 remain_mile
+The detailed definitions of the fields in the message are shown in the table below:
+Field Name
+Meaning
+Type
+Field Value Description
+vel_x
+Forward/Backward Movement Speed(m/s)
+float32
+Positive and negative values represent forward and backward speeds respectively
+vel_y
+Left/Right Movement Speed(m/s)
+float32
+Positive and negative values represent left and right movement speeds respectively
+vel_yaw
+Horizontal Steering Speed(rad/s)
+float32
+Positive and negative values represent counterclockwise and clockwise rotation speeds respectively
+height
+The height of the robot (m)
+float32
+
+state
+The motion state of the robot
+int32
+Idle = 0
+Stand = 1
+Soft Emergency Stop = 2
+Power-on Damping = 3
+Sit = 4
+RL Control = 17
+gait
+The gait of the robot
+uint32
+Basic (Standard Motion Mode) = 0x1001
+Flat (Agile Moton Mode) = 0x3002
+Stair (Agile Motion Mode) = 0x3003
+payload
+Invalid parameter
+/
+
+remain_mile
+Estimated remaining range (km)
+float32
+
+[Notes] The standard motion mode is suitable for manual control. The agile motion mode offers better gait speed response performance and is suitable for navigation and other autonomous algorithm development.
+Developers who want to subscribe to the topic in their own programs need to define the structure of this custom message type in codes.
+
+
+
+2.3 Velocity-related Topics
+
+2.3.1 Issue velocity commands for navigation planning
+[Notes] When publishing this topic, potential conflicts may arise with the robot's built-in planner service. Please refer to Appendix 2 to disable the planner service.This topic also depends on the basic_server service. If the velocity command does not take effect, please refer to Appendix 2 to check the service status and start or stop the corresponding service as needed. Furthermore, publishing this topic may conflict with the charge_manager service used by the robot's autonomous charging program. Avoid publishing this topic while the robot is executing an autonomous charging task, or refer to Appendix 2 to disable the charge_manager service to deactivate the autonomous charging function. 
+[Notes] This velocity topic is only effective when the robot is in navigation mode, and it is recommended to publish it at a fixed frequency of 10 Hz.
+[Notes] During development, if the robot’s built-in localization service is not required, you can refer to Appendix 2 to stop or disable the localization service to save resources.
+Developers can publish messages to the topic to issue velocity commands for navigation planning to control the robot's movement; and subscribe to the topic to obtain the velocity commands issued by the robot’s own navigation system.
+Topic Name
+Description
+Message Type
+/NAV_CMD
+Issue velocity commands for navigation planning
+drdds::msg::NavCmd
+The message type drdds/msg/NavCmd for the topic /NAV_CMD is a custom message type that contains drdds::msg::MetaType and drdds::msg::NavCmdValue:
+MetaType header
+  uint64 frame_id
+  Timestamp timestamp
+    int32 sec
+    uint32 nsec
+NavCmdValue data
+  float32 x_vel     
+  float32 y_vel    
+  float32 yaw_vel  
+The meanings of the fields corresponding to the message content are shown in the table below:
+Field
+Meaning
+Type
+Field Value Description
+x_vel
+Forward/Backward Movement Speed(m/s)
+float32
+Positive and negative values represent forward and backward speeds respectively
+y_vel
+Left/Right Movement Speed(m/s)
+float32
+Positive and negative values represent left and right movement speeds respectively
+yaw-vel
+Horizontal Steering Speed(rad/s)
+float32
+Positive and negative values represent counterclockwise and clockwise rotation speeds respectively
+The positive directions for the robot's movement and rotation are shown in the diagram below: 
+
+Developers who want to subscribe to the topic in their own programs need to define the structure of this custom message type in codes.
 
 ## Page 33
 
