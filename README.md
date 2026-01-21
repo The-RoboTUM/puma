@@ -1,5 +1,106 @@
 # Pedro's Notes
 
+### 2026.1.21
+### 🧾 Update Logs
+
+### TF Drift Issue in RViz: Postmortem & Root Cause Analysis
+
+#### Observed Behavior
+
+**Initially**
+- Even when the robot was stopped, or only moving forward/backward, the `base_link` in RViz slowly drifted.
+
+**Later**
+- After introducing a cut-off (deadband), the drift stopped once forward/backward motion ended.
+
+**However**
+- As soon as `q/e` (in-place rotation) was used:
+  - After releasing all inputs and stopping,
+  - `base_link` started drifting again,
+  - Often consistently in the same direction.
+
+
+#### Root Cause (Core Insight)
+
+The `/odom` pose is obtained by **integrating velocity**:
+
+```text
+x += v_x * dt
+y += v_y * dt
+```
+#### Why Drift Happens
+
+Therefore, **any non-zero velocity bias**, no matter how small, will accumulate into continuous position drift over time.
+
+When the robot is *perceived as stationary*, the reported `LinearX / LinearY` may still contain small residual values  
+(e.g. `-0.002`, `-0.004`). Over time, these values are integrated into visible drift.
+
+**More importantly**:  
+After in-place rotation, the robot’s internal state or filtering often introduces a **more stable and larger bias** in  
+`LinearX / LinearY` (e.g. `-0.037 ~ -0.038` as observed).
+
+At this magnitude:
+
+- The deadband can no longer suppress the bias
+- The bias is continuously integrated
+- Resulting in **obvious and directional drift**
+
+
+#### Solution Overview: Two Layers of Defense
+
+##### Defense Layer 1: Cut-off / Deadband (Verified Effective)
+
+Treat sufficiently small velocities as pure noise and force them to zero before integration:
+
+```text
+if |LinearX| < deadband_v        → LinearX = 0
+if |LinearY| < deadband_v        → LinearY = 0
+if |OmegaZ|  < deadband_yaw_rate → OmegaZ  = 0
+```
+This primarily solves:
+
+- Small drift when stationary
+- Drift after straight-line motion stops
+
+
+##### Defense Layer 2: Intent-Gated Integration (Solves Post-Rotation Drift)
+
+When operator input clearly indicates **pure rotation**  
+(`/cmd_vel` linear ≈ 0 and angular velocity is significant):
+
+- **Freeze translational integration**
+  - Do **not** update `x / y`
+  - Even if reported `LinearX / LinearY` are non-zero
+
+When the operator resumes translational commands (`w / s / a / d`):
+
+- **Unfreeze integration**
+- Resume normal position updates
+
+This directly addresses:
+
+- Systematic velocity bias introduced after in-place rotation
+- Drift caused by biased odometry during rotational maneuvers
+
+
+#### Optional Enhancement: Continuous-Still Freeze
+
+If the system detects **N consecutive frames** of complete stillness:
+
+- Linear velocity = 0
+- Angular velocity = 0
+
+Then:
+
+- **Freeze integration entirely**
+
+This provides additional robustness against:
+
+- Residual sensor noise
+- Long-term numerical drift while idle
+
+
+---
 
 ### 2026.1.20
 ### 🧾 Update Logs
