@@ -1,9 +1,215 @@
 # Pedro's Notes
 
 
-### 2026.1.10
-### 🧾 Update Log
+### 2026.1.20
+### 🧾 Update Logs
 
+### PUMA Onboard Camera → Host Computer RViz2 Display  
+**(RTSP + ROS2 Image Pipeline)**
+
+This Update logs explains how to verify the RTSP video streams from the **PUMA robot’s front/rear cameras** on the host computer, and how to visualize them in **RViz2** using the **Image** display.
+
+
+#### 1. Background & Principle (Brief)
+
+##### What is RTSP
+
+**RTSP (Real Time Streaming Protocol)** is a protocol commonly used for pulling real-time video streams. It is widely used in surveillance cameras and robotic vision systems.
+
+On the **PUMA robot**, camera images are encoded and exposed via an **RTSP server**, while the **host Computer acts as a client** to pull the stream.
+
+**RTSP stream addresses:**
+
+- **Front camera**
+
+```text
+rtsp://10.21.31.103:8554/video1
+```
+
+- **Rear camera**
+
+```text
+rtsp://10.21.31.103:8554/video2
+```
+
+##### Why RViz2 Cannot Play RTSP Directly
+
+RViz2 **cannot subscribe to RTSP streams directly**.
+
+The RViz2 **Image** display only supports ROS2 image topics:
+- `sensor_msgs/Image`
+- `sensor_msgs/CompressedImage`
+
+Therefore, a **bridge node (camera bridge)** is required to convert RTSP into a ROS2 image topic.
+
+**Data flow:**
+
+
+
+
+```text
+RTSP stream
+↓
+Decode
+↓
+ROS2 Image Topic (e.g. /camera/front/image_raw)
+↓
+RViz2 Image Display
+```
+
+#### 2. Network & Prerequisites
+
+##### 2.1 Connect the Host Computer to the Robot Onboard Computer
+
+You can connect using **either**:
+
+- **WiFi**  
+  Connect to the robot hotspot:
+
+
+```text
+SSID: CA9B_NO.XXX_5G
+Password: 12345678
+```
+
+- **Wired Ethernet connection**
+
+
+
+##### 2.2 Verify Network Connectivity
+
+Run the following command on the host PC:
+
+```bash
+ping -c 3 10.21.31.103
+```
+✅ You should receive replies without packet loss.
+
+
+
+##### 2.3 ROS2 Installation
+
+ROS2 must be installed on the host PC.  
+This project uses **ROS2 Jazzy**.
+
+Source the ROS2 environment:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+```
+
+#### 3. Verify the RTSP Stream First (Mandatory)
+
+Before touching ROS2 or RViz2, **always verify the RTSP stream independently**.
+
+##### Method A: ffplay (Fastest)
+
+```bash
+ffplay -fflags nobuffer -flags low_delay -rtsp_transport tcp \
+rtsp://10.21.31.103:8554/video1
+```
+
+##### Method B: GStreamer
+
+```bash
+gst-launch-1.0 rtspsrc location=rtsp://10.21.31.103:8554/video1 latency=100 \
+! decodebin ! videoconvert ! autovideosink
+```
+
+✅ **If video is displayed**, the following are confirmed:
+- Network connectivity is correct
+- RTSP server on the robot is working
+- Camera stream is alive
+
+> ⚠️ If this step fails, **do not proceed** to ROS2/RViz2 debugging.
+
+
+#### 4. Confirm the ROS2 Image Topic Is Being Published
+
+The **camera bridge node** converts RTSP into a ROS2 image topic.
+
+A successful setup should publish a topic such as:
+
+```text
+/camera/front/image_raw
+```
+
+##### 4.1 List All ROS2 Topics
+
+```bash
+ros2 topic list
+```
+##### 4.2 Inspect Topic Details (Including QoS)
+
+```bash
+ros2 topic info -v /camera/front/image_raw
+```
+
+✅ You should see:
+- **Type:** `sensor_msgs/msg/Image`
+- **Publisher count:** `>= 1`
+
+This confirms the image is being published correctly.
+
+
+#### 5. Display the Image in RViz2 (Key Step)
+
+##### 5.1 Launch RViz2
+
+```bash
+rviz2
+```
+
+### 5.2 Add an Image Display
+
+1. In the left panel, click **Add**
+2. Select **Image**
+3. Click **OK**
+
+
+##### 5.3 Configure the Image Display
+
+- **Image → Topic**  
+  Select:
+
+
+```bash
+/camera/front/image_raw
+```
+
+⚠️ If the topic field is empty, RViz will show:
+```text
+Error subscribing: Empty topic name
+```
+
+##### 5.4 Set the Correct QoS Policy (Important)
+
+- **Image → Reliability Policy**
+
+```text
+Best Effort
+```
+
+
+📌 Many camera streams use **Best Effort** for lower latency.  
+If RViz is set to **Reliable**, it may fail to receive images.
+
+
+#### ✅ Final Result
+
+When everything is configured correctly:
+
+- RTSP stream is reachable
+- ROS2 image topic is published
+- RViz2 subscribes with correct QoS
+
+➡️ **The RViz2 Image display will show the live camera feed in real time.**
+
+
+---
+
+### 2026.1.10
+### 🧾 Update Logs
 
 #### ✅ Added
 
