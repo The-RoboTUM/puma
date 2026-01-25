@@ -1,5 +1,219 @@
 # Pedro's Notes
 
+
+### 2026.1.24
+### 🧾 Update Logs
+
+### Robot LiDAR to Host Computer – Reproducible Notes (UDP relay → Host decode → ROS2 PointCloud2)
+
+#### 0) TL;DR (30 seconds)
+- **First time only:** install/build the RoboSense driver + prepare configs.
+- **Every run:** set the host Ethernet IP → start multicast relay on the robot → verify multicast UDP arrives → run the driver on the host → publish a static TF → visualize in RViz2.
+
+
+#### 1) First-time setup (do this once, have already down on our workstation)
+
+##### 1.1 Install basic system tools
+```bash
+sudo apt update
+sudo apt install -y tcpdump git
+```
+
+#### 1.2 Install RoboSense ROS2 driver (two options)
+
+We support two installation paths:
+
+##### Option A – Install via apt (if available)
+**If this is your first time**, run:
+```bash
+sudo apt install -y ros-jazzy-rslidar-sdk ros-jazzy-rslidar-msg
+```
+
+If you already installed these packages before, skip to Section 2 (Runbook).
+
+
+##### Option B – Build from source (recommended for RSAIRY / fewer compatibility issues)
+
+**If this is your first time**, run:
+```bash
+mkdir -p ~/.../ws_rslidar/src
+cd ~/.../ws_rslidar/src
+git clone https://github.com/RoboSense-LiDAR/rslidar_sdk.git
+cd rslidar_sdk
+git submodule update --init --recursive
+```
+
+✅ Make sure the submodule exists:
+```bash
+ls src/rs_driver/CMakeLists.txt
+```
+
+⚠️ Important: Do not build inside a conda environment, otherwise colcon/CMake may pick the wrong Python.
+If your prompt shows (base) or conda is active:
+
+```bash
+conda deactivate
+which python3   # expected: /usr/bin/python3
+python3 -V
+```
+
+
+Build:
+```bash
+cd ~/.../ws_rslidar
+rm -rf build install log
+
+source /opt/ros/jazzy/setup.bash
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install
+```
+
+If you already built the workspace before and it still exists, skip to Section 2 (Runbook).
+
+
+#### 2) Runbook (repeat every time)
+
+##### 2.1 Configure the host PC Ethernet IP (mandatory)
+
+The robot Ethernet port has **no DHCP**, so the host must use a static IP.
+
+```bash
+sudo ip addr flush dev enp7s0
+sudo ip addr add 10.21.31.50/24 dev enp7s0
+ip a show enp7s0
+```
+
+Verify connectivity:
+```bash
+ping -c 2 10.21.31.106
+ping -c 2 10.21.31.104
+```
+
+> If you are connected to **both** robot Wi-Fi and Ethernet, ensure traffic to `10.21.31.0/24` goes via **Ethernet** (not Wi-Fi).
+
+Check routes:
+```bash
+ip route | grep 10.21.31
+```
+
+if you see a route for 10.21.31.0/24 via Wi-Fi, remove it (replace with your actual gateway/dev):
+```bash
+sudo ip route del 10.21.31.0/24 via <WIFI_GW> dev wlp8s0
+```
+
+##### 2.2 Start multicast relay on the robot (10.21.31.106)
+
+On `10.21.31.106`:
+```bash
+ssh user@10.21.31.106
+sudo systemctl enable multicast-relay.service
+sudo systemctl start multicast-relay.service
+sudo systemctl status multicast-relay.service --no-pager
+```
+
+Expected: Active: active (running).
+
+
+##### 2.3 Verify multicast UDP reaches the host Computer (highly recommended)
+
+On the host Computer:
+```bash
+sudo tcpdump -ni enp7s0 -nn 'udp and (port 6691 or port 6692)' -c 20
+```
+
+Expected packets like:
+
+- `10.21.31.106.xxxx > 224.10.10.201.6691: UDP, length 1248`
+- `10.21.31.106.xxxx > 224.10.10.202.6692: UDP, length 1248`
+
+If you see **no packets**, fix networking/relay/routing first (don’t debug ROS yet).
+
+
+
+##### 2.4 Start `rslidar_sdk` on the host Computer (decode UDP → ROS2 PointCloud2)
+
+In a host terminal:
+```bash
+source /opt/ros/jazzy/setup.bash
+source ~/.../ws_rslidar/install/setup.bash   # only if using source build
+```
+
+(Optional sanity check – ensure we’re using the source-built driver):
+```bash
+ros2 pkg prefix rslidar_sdk
+# should point to .../ws_rslidar/install/rslidar_sdk (not /opt/ros/...)
+```
+
+Run the node:
+```bash
+ros2 run rslidar_sdk rslidar_sdk_node --ros-args --params-file ~/robot_dds/rslidar_rosparams.yaml
+```
+
+Expected topics:
+- `/rslidar_points_6691`
+- `/rslidar_points_6692`
+
+Verify frequency (new terminal):
+```bash
+ros2 topic hz /rslidar_points_6691
+ros2 topic hz /rslidar_points_6692
+```
+
+(We observed ~9 Hz in our setup.)
+
+
+#### 3) RViz2 visualization (TF fix required)
+
+##### 3.1 Symptom
+
+RViz2 receives messages at ~9 Hz but shows **0 points** with an error like:
+- `Could not transform from [lidar_link] to [base_link]`
+
+Reason: the pointcloud `header.frame_id` is `lidar_link`, but there is **no TF** between `base_link` and `lidar_link` on the host.
+
+##### 3.2 Quick fix: publish a static TF (host Computer)
+
+In a new host terminal:
+```bash
+source /opt/ros/jazzy/setup.bash
+source ~/.../ws_rslidar/install/setup.bash
+
+ros2 run tf2_ros static_transform_publisher \
+  --x 0 --y 0 --z 0 \
+  --roll 0 --pitch 0 --yaw 0 \
+  --frame-id base_link \
+  --child-frame-id lidar_link
+```
+
+Then in RViz2:
+- Fixed Frame: `base_link`
+- Add → `PointCloud2`
+- Topic: `/rslidar_points_6691` or `/rslidar_points_6692`
+
+Note: This uses a zero transform. For correct placement, replace x/y/z/roll/pitch/yaw with the real LiDAR extrinsics.
+
+
+#### 4) Quick “Do I need the install steps?” checks
+
+apt packages installed?
+```bash
+dpkg -l | grep rslidar
+```
+
+source build already exists?
+```bash
+test -f ~/.../ws_rslidar/install/setup.bash && echo "source build exists"
+```
+
+driver package visible to ROS2?
+```bash
+ros2 pkg prefix rslidar_sdk
+```
+
+
+
+
+---
 ### 2026.1.21
 ### 🧾 Update Logs
 
