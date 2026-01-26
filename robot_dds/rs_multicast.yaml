@@ -1,0 +1,63 @@
+common:
+  msg_source: 1                                       
+  send_point_cloud_ros: true                                                  
+  send_packet_ros: false                                
+
+lidar:
+  - driver:
+      lidar_type: RSAIRY            
+      msop_port: 6691             
+      difop_port: 7781     
+      imu_port: 6681
+      group_address: 224.10.10.201
+      host_address: 10.21.31.50     
+      wait_for_difop: true
+      min_distance: 0.2            #  Minimum distance of point cloud
+      max_distance: 60            #  Maximum distance of point cloud
+      use_lidar_clock: true        #  true--Use the lidar clock as the message timestamp
+                                   #  false-- Use the system clock as the timestamp
+      dense_points: true          #  true: discard NAN points; false: reserve NAN points
+      
+      ts_first_point: true        #  true: time-stamp point cloud with the first point; false: with the last point;   
+
+
+      start_angle: 0               #  Start angle of point cloud
+      end_angle: 360               #  End angle of point cloud
+      # x: 0.32028
+      # y: 0
+      # z: -0.013
+      # roll: 0
+      # pitch: -1.57079
+      # yaw: -3.14159
+    ros:
+      ros_frame_id: lidar_link
+      ros_send_point_cloud_topic: /rslidar_points_6691
+  - driver:
+      lidar_type: RSAIRY            
+      msop_port: 6692             
+      difop_port: 7782     
+      imu_port: 6682
+      group_address: 224.10.10.202
+      host_address: 10.21.31.50     
+      wait_for_difop: true
+      min_distance: 0.2            #  Minimum distance of point cloud
+      max_distance: 60            #  Maximum distance of point cloud
+      use_lidar_clock: true        #  true--Use the lidar clock as the message timestamp
+                                   #  false-- Use the system clock as the timestamp
+      dense_points: true          #  true: discard NAN points; false: reserve NAN points
+      
+      ts_first_point: true        #  true: time-stamp point cloud with the first point; false: with the last point;   
+
+
+      start_angle: 0               #  Start angle of point cloud
+      end_angle: 360               #  End angle of point cloud
+      # Instead of using this coordinates, we run a transform on ros 
+      # x: -0.32028
+      # y: 0
+      # z: -0.013
+      # roll: 0
+      # pitch: -1.57079
+      # yaw: 0
+    ros:
+      ros_frame_id: lidar_link_2
+      ros_send_point_cloud_topic: /rslidar_points_6692
