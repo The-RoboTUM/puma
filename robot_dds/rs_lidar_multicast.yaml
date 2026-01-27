@@ -23,15 +23,17 @@ lidar:
 
       start_angle: 0               #  Start angle of point cloud
       end_angle: 360               #  End angle of point cloud
+      
       # x: 0.32028
       # y: 0
       # z: -0.013
       # roll: 0
       # pitch: -1.57079
       # yaw: -3.14159
+
     ros:
-      ros_frame_id: lidar_link
-      ros_send_point_cloud_topic: /rslidar_points_6691
+      ros_frame_id: lidar_link_front
+      ros_send_point_cloud_topic: /rslidar_points_6691_front
   - driver:
       lidar_type: RSAIRY            
       msop_port: 6692             
@@ -51,13 +53,16 @@ lidar:
 
       start_angle: 0               #  Start angle of point cloud
       end_angle: 360               #  End angle of point cloud
+      
       # Instead of using this coordinates, we run a transform on ros 
+      
       # x: -0.32028
       # y: 0
       # z: -0.013
       # roll: 0
       # pitch: -1.57079
       # yaw: 0
+
     ros:
-      ros_frame_id: lidar_link_2
-      ros_send_point_cloud_topic: /rslidar_points_6692
+      ros_frame_id: lidar_link_rear
+      ros_send_point_cloud_topic: /rslidar_points_6692_rear

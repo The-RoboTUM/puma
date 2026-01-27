@@ -1,4 +1,4 @@
 /**:
   ros__parameters:
-    config_path: "/home/robotum/Documents/RoboTUM_ws/puma/robot_dds/rs_multicast.yaml"
+    config_path: "/home/robotum/Documents/RoboTUM_ws/puma/robot_dds/rs_lidar_multicast.yaml"
 
