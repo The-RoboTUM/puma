@@ -1,5 +1,8 @@
 # Pedro's Notes
 
+### 2026.1.30
+### 
+
 ### 2026.1.26
 ### 🧾 Update Logs
 
@@ -272,7 +275,23 @@ rviz2
   - `/rslidar_points_6692_rear`
 
 
-#### 8. Summary
+#### 8.Visualizing TF Frame Relationships in ROS 2
+```bash
+ros2 run rqt_tf_tree rqt_tf_tree
+```
+In ROS 2, we often launch a visualization tool to inspect `TF` frame relationships.
+
+So, what exactly is `TF` (Transform)?
+
+TF is the unified language that describes how coordinate frames are related to each other.
+
+👉 It answers one simple question:
+
+> If I see a point in coordinate frame A, where is that same point in coordinate frame B?
+
+
+
+#### 9. Summary
 
 This workspace provides:
 
@@ -418,9 +437,22 @@ If you see **no packets**, fix networking/relay/routing first (don’t debug ROS
 ##### 2.4 Start `rslidar_sdk` on the host Computer (decode UDP → ROS2 PointCloud2)
 
 In a host terminal:
+
+first enter the corresponding folder:
+```bash
+cd ~/.../ws_rslidar
+```
+
+and then:
 ```bash
 source /opt/ros/jazzy/setup.bash
 source ~/.../ws_rslidar/install/setup.bash   # only if using source build
+```
+
+or 
+```bash
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
 ```
 
 (Optional sanity check – ensure we’re using the source-built driver):
@@ -430,8 +462,9 @@ ros2 pkg prefix rslidar_sdk
 ```
 
 Run the node:
+
 ```bash
-ros2 run rslidar_sdk rslidar_sdk_node --ros-args --params-file ~/robot_dds/rslidar_rosparams.yaml
+ros2 run rslidar_sdk rslidar_sdk_node --ros-args --params-file /home/robotum/Documents/RoboTUM_ws/puma/robot_dds/rslidar_rosparams.yaml
 ```
 
 Expected topics:
