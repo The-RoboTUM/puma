@@ -25,6 +25,8 @@ class RtspToRos2Image(Node):
     def __init__(self) -> None:
         super().__init__("rtsp_to_ros2_image")
 
+        self.set_parameters([rclpy.parameter.Parameter('use_sim_time', rclpy.Parameter.Type.BOOL, True)])
+        
         # ---------------- Parameters ----------------
         self.declare_parameter("rtsp_url", "rtsp://10.21.31.103:8554/video1")
         self.declare_parameter("topic", "/camera/front/image_raw")
@@ -247,7 +249,8 @@ class RtspToRos2Image(Node):
             data = mapinfo.data  # bytes-like
 
             msg = Image()
-            msg.header.stamp = self.get_clock().now().to_msg()
+            now = self.get_clock().now()
+            msg.header.stamp = (now + rclpy.duration.Duration(seconds=0.05)).to_msg()
             msg.header.frame_id = self.frame_id
             msg.height = int(height)
             msg.width = int(width)
