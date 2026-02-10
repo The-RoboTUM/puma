@@ -2,12 +2,12 @@
   ros__parameters:
     transform_names: ["front", "rear"]
 
-    transforms.front.parent: "base_link"
+    transforms.front.parent: "puma_base_link"
     transforms.front.child:  "lidar_link_front"
     transforms.front.xyz:    [0.32028, 0.0, -0.013]
     transforms.front.rpy:    [-3.14159, -1.57079, 0.0]
 
-    transforms.rear.parent: "base_link"
+    transforms.rear.parent: "puma_base_link"
     transforms.rear.child:  "lidar_link_rear"
     transforms.rear.xyz:    [-0.32028, 0.0, -0.013]
     transforms.rear.rpy:    [0.0, -1.57079, 0.0]

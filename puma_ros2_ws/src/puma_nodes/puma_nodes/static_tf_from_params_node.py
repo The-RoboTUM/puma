@@ -39,7 +39,8 @@ class StaticTfFromParams(Node):
             xyz_key = f"transforms.{name}.xyz"
             rpy_key = f"transforms.{name}.rpy"
 
-            self.declare_parameter(parent_key, "base_link")
+            # self.declare_parameter(parent_key, "base_link")
+            self.declare_parameter(parent_key, "puma_base_link")
             self.declare_parameter(child_key, f"{name}_link")
             self.declare_parameter(xyz_key, [0.0, 0.0, 0.0])
             self.declare_parameter(rpy_key, [0.0, 0.0, 0.0])
