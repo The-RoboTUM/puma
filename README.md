@@ -193,6 +193,57 @@ source ~/Documents/RoboTUM_ws/puma/puma_ros2_ws/install/setup.bash
 rviz2
 ```
 
+- Fixed Frame: `map` or `puma_base_link`
+##### 2.7.1 Add an LiDAR Visualization
+
+1. In the left panel, click **Add**
+2. Select **PointCloud2**
+3. Click **OK**
+
+- **PointCloud2 → Topic**  
+  Select:
+```bash
+    rslidar_points_6691_front
+```
+- **PointCloud2 → Topic**  
+```bash
+    rslidar_points_6692_rear
+```
+
+##### 2.7.2 Add an Image Display
+
+1. In the left panel, click **Add**
+2. Select **Image**
+3. Click **OK**
+
+
+ Configure the Image Display:
+
+- **Image → Topic**  
+  Select:
+
+
+```bash
+/camera/front/image_raw
+```
+
+⚠️ If the topic field is empty, RViz will show:
+```text
+Error subscribing: Empty topic name
+```
+
+##### Note: Set the Correct QoS Policy (Important)
+
+- **Image → Reliability Policy**
+
+```text
+Best Effort
+```
+
+
+##### 📌 Many camera streams use `Best Effort` for lower latency.  
+
+If RViz is set to `Reliable`, it may fail to receive images.
 
 ---
 
