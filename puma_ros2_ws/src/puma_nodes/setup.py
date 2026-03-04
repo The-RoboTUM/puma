@@ -32,6 +32,7 @@ setup(
             "udp_patrol_bridge = puma_nodes.udp_patrol_bridge_node:main",
             'static_tf_from_params = puma_nodes.static_tf_from_params_node:main',
             "ptz_camera_image_publisher = puma_nodes.ptz_camera_image_publisher:main",
+            'ptz_camera_keyboard = puma_nodes.ptz_camera_keyboard_node:main',
 
         ],
     },

@@ -322,7 +322,8 @@ This launch file automatically starts:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source ~/Documents/RoboTUM_ws/puma/puma_ros2_ws/install/setup.bash
+cd ~/Documents/RoboTUM_ws/puma/puma_ros2_ws/
+source install/setup.bash
 ```
 
 Run:
@@ -344,7 +345,11 @@ Published topics:
 Run the keyboard control script:
 
 ```bash
-python3 ptz_camear_keyboard.py
+source /opt/ros/jazzy/setup.bash
+cd ~/Documents/RoboTUM_ws/puma/puma_ros2_ws/
+source install/setup.bash
+
+ros2 run puma_nodes ptz_camera_keyboard
 ```
 
 Controls:
