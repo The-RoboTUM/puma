@@ -328,7 +328,7 @@ source ~/Documents/RoboTUM_ws/puma/puma_ros2_ws/install/setup.bash
 Run:
 
 ```bash
-ros2 launch puma_nodes ptz_camera_image_publisher.py
+ros2 run puma_nodes ptz_camera_image_publisher.py
 ```
 
 Published topics:
