@@ -329,7 +329,7 @@ source install/setup.bash
 Run:
 
 ```bash
-ros2 run puma_nodes ptz_camera_image_publisher.py
+ros2 run puma_nodes ptz_camera_image_publisher
 ```
 
 Published topics:
