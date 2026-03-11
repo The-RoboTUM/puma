@@ -339,6 +339,7 @@ Published topics:
 | PTZ RGB | `/ptz/rgb/image_raw` |
 | PTZ Thermal | `/ptz/thermal/image_raw` |
 
+Web Live Visulization: http://192.168.1.108/
 
 ### 8. PTZ Camera Control
 
