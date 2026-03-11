@@ -150,6 +150,7 @@ Connect to the robot:
 ```bash
 ssh user@10.21.31.106
 ```
+password:'
 
 Enable and start the service:
 
